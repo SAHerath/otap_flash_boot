@@ -12,6 +12,12 @@ Update:    1st, 29 Dec 2007 : Enable CMD_SPI_MULTI but ignore unused command by 
 Compiler:  WINAVR20060421
 Description: add timeout feature like previous Wiring bootloader
 
+Modified:  Supun Herath <supun@utequip.com> 
+Date:      20 Aug 2019
+Update:
+Compiler:  avr-gcc (AVR_8_bit_GNU_Toolchain_3.6.1_1750) 5.4.0
+Description: add capability to write internal flash through external flash chip using spi protocol
+
 DESCRIPTION:
     This program allows an AVR with bootloader capabilities to
     read/write its own Flash/EEprom. To enter Programming mode
@@ -111,13 +117,14 @@ LICENSE:
 #include	<stdlib.h>
 #include	"command.h"
 
-
+/*
 #if defined(_MEGA_BOARD_) || defined(_BOARD_AMBER128_) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) \
-	|| defined(__AVR_ATmega2561__) || defined(__AVR_ATmega1284P__) || defined(ENABLE_MONITOR)
+	| defined(__AVR_ATmega2561__) || defined(__AVR_ATmega1284P__) || defined(ENABLE_MONITOR)
 	#undef		ENABLE_MONITOR
 	#define		ENABLE_MONITOR
 	static void	RunMonitor(void);
-#endif
+#endif	
+*/
 
 #ifndef EEWE
 	#define EEWE    1
@@ -126,7 +133,7 @@ LICENSE:
 	#define EEMWE   2
 #endif
 
-//#define	_DEBUG_SERIAL_
+#define	_DEBUG_SERIAL_
 //#define	_DEBUG_WITH_LEDS_
 
 
@@ -147,79 +154,10 @@ LICENSE:
 //************************************************************************
 #define		BLINK_LED_WHILE_WAITING
 
-#ifdef _MEGA_BOARD_
+#ifdef __AVR_ATmega2560__
 	#define PROGLED_PORT	PORTB
 	#define PROGLED_DDR		DDRB
 	#define PROGLED_PIN		PINB7
-#elif defined( _BOARD_AMBER128_ )
-	//*	this is for the amber 128 http://www.soc-robotics.com/
-	//*	onbarod led is PORTE4
-	#define PROGLED_PORT	PORTD
-	#define PROGLED_DDR		DDRD
-	#define PROGLED_PIN		PINE7
-#elif defined( _CEREBOTPLUS_BOARD_ ) || defined(_CEREBOT_II_BOARD_)
-	//*	this is for the Cerebot 2560 board and the Cerebot-ii
-	//*	onbarod leds are on PORTE4-7
-	#define PROGLED_PORT	PORTE
-	#define PROGLED_DDR		DDRE
-	#define PROGLED_PIN		PINE7
-#elif defined( _PENGUINO_ )
-	//*	this is for the Penguino
-	//*	onbarod led is PORTE4
-	#define PROGLED_PORT	PORTC
-	#define PROGLED_DDR		DDRC
-	#define PROGLED_PIN		PINC6
-#elif defined( _ANDROID_2561_ ) || defined( __AVR_ATmega2561__ )
-	//*	this is for the Boston Android 2561
-	//*	onbarod led is PORTE4
-	#define PROGLED_PORT	PORTA
-	#define PROGLED_DDR		DDRA
-	#define PROGLED_PIN		PINA3
-#elif defined( _BOARD_MEGA16 )
-	//*	onbarod led is PORTA7
-	#define PROGLED_PORT	PORTA
-	#define PROGLED_DDR		DDRA
-	#define PROGLED_PIN		PINA7
-	#define UART_BAUDRATE_DOUBLE_SPEED 0
-
-#elif defined( _BOARD_BAHBOT_ )
-	//*	dosent have an onboard LED but this is what will probably be added to this port
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB0
-
-#elif defined( _BOARD_ROBOTX_ )
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB6
-#elif defined( _BOARD_CUSTOM1284_BLINK_B0_ )
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB0
-#elif defined( _BOARD_CUSTOM1284_ )
-	#define PROGLED_PORT	PORTD
-	#define PROGLED_DDR		DDRD
-	#define PROGLED_PIN		PIND5
-#elif defined( _AVRLIP_ )
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB5
-#elif defined( _BOARD_STK500_ )
-	#define PROGLED_PORT	PORTA
-	#define PROGLED_DDR		DDRA
-	#define PROGLED_PIN		PINA7
-#elif defined( _BOARD_STK502_ )
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB5
-#elif defined( _BOARD_STK525_ )
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB7
-#else
-	#define PROGLED_PORT	PORTG
-	#define PROGLED_DDR		DDRG
-	#define PROGLED_PIN		PING2
 #endif
 
 
@@ -275,104 +213,25 @@ LICENSE:
 
 /*
  * Signature bytes are not available in avr-gcc io_xxx.h
+ * configured for atmega2560
  */
-#if defined (__AVR_ATmega8__)
-	#define SIGNATURE_BYTES 0x1E9307
-#elif defined (__AVR_ATmega16__)
-	#define SIGNATURE_BYTES 0x1E9403
-#elif defined (__AVR_ATmega32__)
-	#define SIGNATURE_BYTES 0x1E9502
-#elif defined (__AVR_ATmega8515__)
-	#define SIGNATURE_BYTES 0x1E9306
-#elif defined (__AVR_ATmega8535__)
-	#define SIGNATURE_BYTES 0x1E9308
-#elif defined (__AVR_ATmega162__)
-	#define SIGNATURE_BYTES 0x1E9404
-#elif defined (__AVR_ATmega128__)
-	#define SIGNATURE_BYTES 0x1E9702
-#elif defined (__AVR_ATmega1280__)
-	#define SIGNATURE_BYTES 0x1E9703
-#elif defined (__AVR_ATmega2560__)
+#ifndef SIGNATURE_BYTES
 	#define SIGNATURE_BYTES 0x1E9801
-#elif defined (__AVR_ATmega2561__)
-	#define SIGNATURE_BYTES 0x1e9802
-#elif defined (__AVR_ATmega1284P__)
-	#define SIGNATURE_BYTES 0x1e9705
-#elif defined (__AVR_ATmega640__)
-	#define SIGNATURE_BYTES  0x1e9608
-#elif defined (__AVR_ATmega64__)
-	#define SIGNATURE_BYTES  0x1E9602
-#elif defined (__AVR_ATmega169__)
-	#define SIGNATURE_BYTES  0x1e9405
-#elif defined (__AVR_AT90USB1287__)
-	#define SIGNATURE_BYTES  0x1e9782
-#else
-	#error "no signature definition for MCU available"
 #endif
 
-
-#if defined(_BOARD_ROBOTX_) || defined(__AVR_AT90USB1287__) || defined(__AVR_AT90USB1286__)
-	#define	UART_BAUD_RATE_LOW			UBRR1L
-	#define	UART_STATUS_REG				UCSR1A
-	#define	UART_CONTROL_REG			UCSR1B
-	#define	UART_ENABLE_TRANSMITTER		TXEN1
-	#define	UART_ENABLE_RECEIVER		RXEN1
-	#define	UART_TRANSMIT_COMPLETE		TXC1
-	#define	UART_RECEIVE_COMPLETE		RXC1
-	#define	UART_DATA_REG				UDR1
-	#define	UART_DOUBLE_SPEED			U2X1
-
-#elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega16__) || defined(__AVR_ATmega32__) \
-	|| defined(__AVR_ATmega8515__) || defined(__AVR_ATmega8535__)
-	/* ATMega8 with one USART */
-	#define	UART_BAUD_RATE_LOW			UBRRL
-	#define	UART_STATUS_REG				UCSRA
-	#define	UART_CONTROL_REG			UCSRB
-	#define	UART_ENABLE_TRANSMITTER		TXEN
-	#define	UART_ENABLE_RECEIVER		RXEN
-	#define	UART_TRANSMIT_COMPLETE		TXC
-	#define	UART_RECEIVE_COMPLETE		RXC
-	#define	UART_DATA_REG				UDR
-	#define	UART_DOUBLE_SPEED			U2X
-
-#elif defined(__AVR_ATmega64__) || defined(__AVR_ATmega128__) || defined(__AVR_ATmega162__) \
-	 || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)
-	/* ATMega with two USART, use UART0 */
-	#define	UART_BAUD_RATE_LOW			UBRR0L
-	#define	UART_STATUS_REG				UCSR0A
-	#define	UART_CONTROL_REG			UCSR0B
-	#define	UART_ENABLE_TRANSMITTER		TXEN0
-	#define	UART_ENABLE_RECEIVER		RXEN0
-	#define	UART_TRANSMIT_COMPLETE		TXC0
-	#define	UART_RECEIVE_COMPLETE		RXC0
-	#define	UART_DATA_REG				UDR0
-	#define	UART_DOUBLE_SPEED			U2X0
-#elif defined(UBRR0L) && defined(UCSR0A) && defined(TXEN0)
-	/* ATMega with two USART, use UART0 */
-	#define	UART_BAUD_RATE_LOW			UBRR0L
-	#define	UART_STATUS_REG				UCSR0A
-	#define	UART_CONTROL_REG			UCSR0B
-	#define	UART_ENABLE_TRANSMITTER		TXEN0
-	#define	UART_ENABLE_RECEIVER		RXEN0
-	#define	UART_TRANSMIT_COMPLETE		TXC0
-	#define	UART_RECEIVE_COMPLETE		RXC0
-	#define	UART_DATA_REG				UDR0
-	#define	UART_DOUBLE_SPEED			U2X0
-#elif defined(UBRRL) && defined(UCSRA) && defined(UCSRB) && defined(TXEN) && defined(RXEN)
-	//* catch all
-	#define	UART_BAUD_RATE_LOW			UBRRL
-	#define	UART_STATUS_REG				UCSRA
-	#define	UART_CONTROL_REG			UCSRB
-	#define	UART_ENABLE_TRANSMITTER		TXEN
-	#define	UART_ENABLE_RECEIVER		RXEN
-	#define	UART_TRANSMIT_COMPLETE		TXC
-	#define	UART_RECEIVE_COMPLETE		RXC
-	#define	UART_DATA_REG				UDR
-	#define	UART_DOUBLE_SPEED			U2X
-#else
-	#error "no UART definition for MCU available"
-#endif
-
+/* 
+ * ATMega with two USART, use UART0 
+ * configured for atmega2560 
+ */
+#define	UART_BAUD_RATE_LOW			UBRR0L
+#define	UART_STATUS_REG				UCSR0A
+#define	UART_CONTROL_REG			UCSR0B
+#define	UART_ENABLE_TRANSMITTER		TXEN0
+#define	UART_ENABLE_RECEIVER		RXEN0
+#define	UART_TRANSMIT_COMPLETE		TXC0
+#define	UART_RECEIVE_COMPLETE		RXC0
+#define	UART_DATA_REG				UDR0
+#define	UART_DOUBLE_SPEED			U2X0
 
 
 /*
@@ -523,6 +382,19 @@ uint32_t count = 0;
 	return UART_DATA_REG;
 }
 
+/*
+unsigned char hexArr[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+
+void printByte(uint8_t numData)
+{
+	char chData1, chData2;
+	chData1 = hexArr[numData >> 4];
+	chData2 = hexArr[numData & 0xF];
+	sendchar(chData1);
+	sendchar(chData2);
+}
+*/
+
 //*	for watch dog timer startup
 void (*app_start)(void) = 0x0000;
 
@@ -549,6 +421,7 @@ int main(void)
 	unsigned int	rcvdCharCntr	=	0;
 #endif
 
+
 	//*	some chips dont set the stack properly
 	asm volatile ( ".set __stack, %0" :: "i" (RAMEND) );
 	asm volatile ( "ldi	16, %0" :: "i" (RAMEND >> 8) );
@@ -565,10 +438,7 @@ int main(void)
 
 	__asm__ __volatile__ ("cli");
 	__asm__ __volatile__ ("wdr");
-	
-	/*MCUSR	=	0;*/
-	MCUSR &= ~(1<<WDRF);
-	
+	//MCUSR	=	0;
 	WDTCSR	|=	_BV(WDCE) | _BV(WDE);
 	WDTCSR	=	0;
 	__asm__ __volatile__ ("sei");
@@ -627,18 +497,34 @@ int main(void)
 #ifdef _DEBUG_SERIAL_
 //	delay_ms(500);
 
-	sendchar('s');
+	sendchar('u');
 	sendchar('t');
-	sendchar('k');
-//	sendchar('5');
-//	sendchar('0');
-//	sendchar('0');
-	sendchar('v');
-	sendchar('2');
+	sendchar('e');
+	sendchar('c');
+	sendchar('h');
+	sendchar('_');
+	sendchar('B');
+	sendchar('B');
+
 	sendchar(0x0d);
 	sendchar(0x0a);
+/*	
+	//FLASHEND and BOOTSIZE
+	uint32_t flash_end = FLASHEND;
+	uint16_t boot_size = BOOTSIZE;
+	
+	printByte((uint8_t)(flash_end >> 24));
+	printByte((uint8_t)((flash_end >> 16) & 0xff));
+	printByte((uint8_t)((flash_end >> 8) & 0xff));
+	printByte((uint8_t)(flash_end & 0xff));
+	
+	sendchar(' ');
+	
+	printByte((uint8_t)((boot_size >> 8) & 0xff));
+	printByte((uint8_t)(boot_size & 0xff));
 
 	delay_ms(100);
+*/
 #endif
 
 	while (boot_state==0)
@@ -710,7 +596,7 @@ int main(void)
 				switch (msgParseState)
 				{
 					case ST_START:
-						if ( c == MESSAGE_START )
+				if ( c == MESSAGE_START )
 						{
 							msgParseState	=	ST_GET_SEQ_NUM;
 							checksum		=	MESSAGE_START^0;
@@ -980,6 +866,7 @@ int main(void)
 	#else
 					address	=	( ((msgBuffer[3])<<8)|(msgBuffer[4]) )<<1;		//convert word to byte address
 	#endif
+			
 					msgLength		=	2;
 					msgBuffer[1]	=	STATUS_CMD_OK;
 					break;
@@ -1137,14 +1024,12 @@ int main(void)
 #endif
 
 #ifdef _DEBUG_SERIAL_
-	sendchar('j');
-//	sendchar('u');
-//	sendchar('m');
-//	sendchar('p');
-//	sendchar(' ');
-//	sendchar('u');
-//	sendchar('s');
-//	sendchar('r');
+	sendchar('b');
+	sendchar('y');
+	sendchar(' ');
+	sendchar('s');
+	sendchar('a');
+	sendchar('h');
 	sendchar(0x0d);
 	sendchar(0x0a);
 

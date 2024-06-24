@@ -59,11 +59,11 @@ FORMAT = ihex
 
 
 # Target file name (without extension).
-TARGET = stk500boot
+TARGET = bootSAH_2
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = stk500boot.c 
+SRC = $(TARGET).c 
 
 
 # List Assembler source files here.
@@ -208,10 +208,11 @@ LDFLAGS += -Wl,--section-start=.text=$(BOOTLOADER_ADDRESS)
 # Type: avrdude -c ?
 # to get a full listing.
 #
-AVRDUDE_PROGRAMMER = stk500v2
+AVRDUDE_PROGRAMMER = usbasp
 
 # com1 = serial port. Use lpt1 to connect to parallel port.
-AVRDUDE_PORT = com1    # programmer connected to serial device
+AVRDUDE_PORT = usb    
+# programmer connected to serial device
 
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 #AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
