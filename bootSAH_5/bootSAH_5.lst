@@ -1,0 +1,2010 @@
+   1               		.file	"bootSAH_5.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__RAMPZ__ = 0x3b
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+   8               		.text
+   9               	.Ltext0:
+  10               		.cfi_sections	.debug_frame
+  12               	SPI_Transfer:
+  13               	.LFB15:
+  14               		.file 1 "bootSAH_5.c"
+   1:bootSAH_5.c   **** /*
+   2:bootSAH_5.c   ****  * bootSAH_5.c
+   3:bootSAH_5.c   ****  *
+   4:bootSAH_5.c   ****  * Created: 19/09/11 07:50:32 PM
+   5:bootSAH_5.c   ****  * Author : supun
+   6:bootSAH_5.c   ****  */ 
+   7:bootSAH_5.c   **** 
+   8:bootSAH_5.c   **** #include	<inttypes.h>
+   9:bootSAH_5.c   **** #include	<avr/io.h>
+  10:bootSAH_5.c   **** #include	<avr/interrupt.h>
+  11:bootSAH_5.c   **** #include	<avr/boot.h>
+  12:bootSAH_5.c   **** #include	<avr/pgmspace.h>
+  13:bootSAH_5.c   **** #include	<util/delay.h>
+  14:bootSAH_5.c   **** #include	<avr/eeprom.h>
+  15:bootSAH_5.c   **** #include	<avr/common.h>
+  16:bootSAH_5.c   **** #include	<stdlib.h>
+  17:bootSAH_5.c   **** 
+  18:bootSAH_5.c   **** 
+  19:bootSAH_5.c   **** #ifdef __AVR_ATmega2560__
+  20:bootSAH_5.c   **** 	#define SPI_PORT	PORTB
+  21:bootSAH_5.c   **** 	#define	SPI_DDR		DDRB
+  22:bootSAH_5.c   **** 	#define	SPI_MISO	PB3
+  23:bootSAH_5.c   **** 	#define	SPI_MOSI	PB2
+  24:bootSAH_5.c   **** 	#define	SPI_SCK		PB1
+  25:bootSAH_5.c   **** 	#define SPI_CS		PB0
+  26:bootSAH_5.c   **** #endif
+  27:bootSAH_5.c   **** 
+  28:bootSAH_5.c   **** #define EXMEM_JEDEC		0xEF4017
+  29:bootSAH_5.c   **** #define EXMEM_SECT_SIZE	4096		// bytes
+  30:bootSAH_5.c   **** #define EXMEM_PAGE_SIZE 256			// bytes
+  31:bootSAH_5.c   **** 
+  32:bootSAH_5.c   **** #define BOOT_EROR_ADDR  256
+  33:bootSAH_5.c   **** #define BOOT_STAT_ADDR  4096    // byte addr
+  34:bootSAH_5.c   **** #define BOOT_CSUM_ADDR  4352    // byte addr
+  35:bootSAH_5.c   **** #define BOOT_DATA_ADDR  8192    // byte addr
+  36:bootSAH_5.c   **** 
+  37:bootSAH_5.c   **** #define	_DEBUG_SERIAL_
+  38:bootSAH_5.c   **** 
+  39:bootSAH_5.c   **** #ifndef BAUDRATE
+  40:bootSAH_5.c   **** 	#define BAUDRATE 115200
+  41:bootSAH_5.c   **** #endif
+  42:bootSAH_5.c   **** 
+  43:bootSAH_5.c   **** #ifndef UART_BAUDRATE_DOUBLE_SPEED
+  44:bootSAH_5.c   **** 	#if defined (__AVR_ATmega32__)
+  45:bootSAH_5.c   **** 		#define UART_BAUDRATE_DOUBLE_SPEED 0
+  46:bootSAH_5.c   **** 	#else
+  47:bootSAH_5.c   **** 		#define UART_BAUDRATE_DOUBLE_SPEED 1
+  48:bootSAH_5.c   **** 	#endif
+  49:bootSAH_5.c   **** #endif
+  50:bootSAH_5.c   **** 
+  51:bootSAH_5.c   **** /* 
+  52:bootSAH_5.c   ****  * ATMega with two USART, use UART0 
+  53:bootSAH_5.c   ****  * configured for atmega2560 
+  54:bootSAH_5.c   ****  */
+  55:bootSAH_5.c   **** #define	UART_BAUD_RATE_LOW			UBRR0L
+  56:bootSAH_5.c   **** #define	UART_STATUS_REG				UCSR0A
+  57:bootSAH_5.c   **** #define	UART_CONTROL_REG			UCSR0B
+  58:bootSAH_5.c   **** #define	UART_ENABLE_TRANSMITTER		TXEN0
+  59:bootSAH_5.c   **** #define	UART_ENABLE_RECEIVER		RXEN0
+  60:bootSAH_5.c   **** #define	UART_TRANSMIT_COMPLETE		TXC0
+  61:bootSAH_5.c   **** #define	UART_RECEIVE_COMPLETE		RXC0
+  62:bootSAH_5.c   **** #define	UART_DATA_REG				UDR0
+  63:bootSAH_5.c   **** #define	UART_DOUBLE_SPEED			U2X0
+  64:bootSAH_5.c   **** 
+  65:bootSAH_5.c   **** /*
+  66:bootSAH_5.c   ****  * Macro to calculate UBBR from XTAL and baudrate
+  67:bootSAH_5.c   ****  */
+  68:bootSAH_5.c   **** #if defined(__AVR_ATmega32__) && UART_BAUDRATE_DOUBLE_SPEED
+  69:bootSAH_5.c   **** 	#define UART_BAUD_SELECT(baudRate,xtalCpu) ((xtalCpu / 4 / baudRate - 1) / 2)
+  70:bootSAH_5.c   **** #elif defined(__AVR_ATmega32__)
+  71:bootSAH_5.c   **** 	#define UART_BAUD_SELECT(baudRate,xtalCpu) ((xtalCpu / 8 / baudRate - 1) / 2)
+  72:bootSAH_5.c   **** #elif UART_BAUDRATE_DOUBLE_SPEED
+  73:bootSAH_5.c   **** 	#define UART_BAUD_SELECT(baudRate,xtalCpu) (((float)(xtalCpu))/(((float)(baudRate))*8.0)-1.0+0.5)
+  74:bootSAH_5.c   **** #else
+  75:bootSAH_5.c   **** 	#define UART_BAUD_SELECT(baudRate,xtalCpu) (((float)(xtalCpu))/(((float)(baudRate))*16.0)-1.0+0.5)
+  76:bootSAH_5.c   **** #endif
+  77:bootSAH_5.c   **** 
+  78:bootSAH_5.c   **** 
+  79:bootSAH_5.c   **** 
+  80:bootSAH_5.c   **** /*
+  81:bootSAH_5.c   ****  * Calculate the address where the bootloader starts from FLASHEND and BOOTSIZE
+  82:bootSAH_5.c   ****  * (adjust BOOTSIZE below and BOOTLOADER_ADDRESS in Makefile if you want to change the size of the 
+  83:bootSAH_5.c   ****  */
+  84:bootSAH_5.c   **** //#define BOOTSIZE 1024
+  85:bootSAH_5.c   **** #if FLASHEND > 0x0F000
+  86:bootSAH_5.c   **** 	#define BOOTSIZE 8192
+  87:bootSAH_5.c   **** #else
+  88:bootSAH_5.c   **** 	#define BOOTSIZE 2048
+  89:bootSAH_5.c   **** #endif
+  90:bootSAH_5.c   **** 
+  91:bootSAH_5.c   **** #define APP_END  (FLASHEND -(2*BOOTSIZE) + 1)
+  92:bootSAH_5.c   **** 
+  93:bootSAH_5.c   **** /*
+  94:bootSAH_5.c   ****  * use 16bit address variable for ATmegas with <= 64K flash
+  95:bootSAH_5.c   ****  */
+  96:bootSAH_5.c   **** #if defined(RAMPZ)
+  97:bootSAH_5.c   **** 	typedef uint32_t address_t;
+  98:bootSAH_5.c   **** #else
+  99:bootSAH_5.c   **** 	typedef uint16_t address_t;
+ 100:bootSAH_5.c   **** #endif
+ 101:bootSAH_5.c   **** 
+ 102:bootSAH_5.c   **** //char hexArr[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+ 103:bootSAH_5.c   **** 
+ 104:bootSAH_5.c   **** /*
+ 105:bootSAH_5.c   ****  * function prototypes
+ 106:bootSAH_5.c   ****  */
+ 107:bootSAH_5.c   **** //void sendchar(char c);
+ 108:bootSAH_5.c   **** //void printByte(uint8_t numData);
+ 109:bootSAH_5.c   **** //static int	Serial_Available(void);
+ 110:bootSAH_5.c   **** //static unsigned char recchar(void);
+ 111:bootSAH_5.c   **** void delay_ms(unsigned int timedelay);
+ 112:bootSAH_5.c   **** void tiny_delay(void);		
+ 113:bootSAH_5.c   **** static uint8_t SPI_Transfer(uint8_t spidata);
+ 114:bootSAH_5.c   **** void FLASH_UntilReady(void);
+ 115:bootSAH_5.c   **** void FLASH_ResetEnable(void);
+ 116:bootSAH_5.c   **** void FLASH_Reset(void);
+ 117:bootSAH_5.c   **** void FLASH_WriteEnable(void);
+ 118:bootSAH_5.c   **** uint16_t FLASH_ReadWord(uint32_t faddr);
+ 119:bootSAH_5.c   **** void FLASH_EraseSector(uint32_t faddr);
+ 120:bootSAH_5.c   **** void FLASH_WriteByte(uint32_t faddr, uint8_t wdata);
+ 121:bootSAH_5.c   **** 
+ 122:bootSAH_5.c   **** /*
+ 123:bootSAH_5.c   **** static void sendchar(char c)
+ 124:bootSAH_5.c   **** {
+ 125:bootSAH_5.c   **** 	UART_DATA_REG	=	c;										// prepare transmission
+ 126:bootSAH_5.c   **** 	while (!(UART_STATUS_REG & (1 << UART_TRANSMIT_COMPLETE)));	// wait until byte sent
+ 127:bootSAH_5.c   **** 	UART_STATUS_REG |= (1 << UART_TRANSMIT_COMPLETE);			// delete TXCflag
+ 128:bootSAH_5.c   **** }
+ 129:bootSAH_5.c   **** 
+ 130:bootSAH_5.c   **** static void printByte(uint8_t numData)
+ 131:bootSAH_5.c   **** {
+ 132:bootSAH_5.c   **** 	char chData1, chData2;
+ 133:bootSAH_5.c   **** 	
+ 134:bootSAH_5.c   **** 	chData1 = hexArr[(numData >> 4)];
+ 135:bootSAH_5.c   **** 	sendchar(chData1);
+ 136:bootSAH_5.c   **** 	chData2 = hexArr[(numData & 0xF)];
+ 137:bootSAH_5.c   **** 	sendchar(chData2);
+ 138:bootSAH_5.c   **** }
+ 139:bootSAH_5.c   **** */
+ 140:bootSAH_5.c   **** 
+ 141:bootSAH_5.c   **** /*
+ 142:bootSAH_5.c   ****  * since this bootloader is not linked against the avr-gcc crt1 functions,
+ 143:bootSAH_5.c   ****  * to reduce the code size, we need to provide our own initialization
+ 144:bootSAH_5.c   ****  */
+ 145:bootSAH_5.c   **** void __jumpMain	(void) __attribute__ ((naked)) __attribute__ ((section (".init9")));
+ 146:bootSAH_5.c   **** #include <avr/sfr_defs.h>
+ 147:bootSAH_5.c   **** 
+ 148:bootSAH_5.c   **** //*****************************************************************************
+ 149:bootSAH_5.c   **** void __jumpMain(void)
+ 150:bootSAH_5.c   **** {
+ 151:bootSAH_5.c   **** //*	July 17, 2010	<MLS> Added stack pointer initialzation
+ 152:bootSAH_5.c   **** //*	the first line did not do the job on the ATmega128
+ 153:bootSAH_5.c   **** 
+ 154:bootSAH_5.c   **** 	asm volatile ( ".set __stack, %0" :: "i" (RAMEND) );
+ 155:bootSAH_5.c   **** 
+ 156:bootSAH_5.c   **** //*	set stack pointer to top of RAM
+ 157:bootSAH_5.c   **** 
+ 158:bootSAH_5.c   **** 	asm volatile ( "ldi	16, %0" :: "i" (RAMEND >> 8) );
+ 159:bootSAH_5.c   **** 	asm volatile ( "out %0,16" :: "i" (AVR_STACK_POINTER_HI_ADDR) );
+ 160:bootSAH_5.c   **** 
+ 161:bootSAH_5.c   **** 	asm volatile ( "ldi	16, %0" :: "i" (RAMEND & 0x0ff) );
+ 162:bootSAH_5.c   **** 	asm volatile ( "out %0,16" :: "i" (AVR_STACK_POINTER_LO_ADDR) );
+ 163:bootSAH_5.c   **** 
+ 164:bootSAH_5.c   **** 	asm volatile ( "clr __zero_reg__" );									// GCC depends on register r1 set to 0
+ 165:bootSAH_5.c   **** 	asm volatile ( "out %0, __zero_reg__" :: "I" (_SFR_IO_ADDR(SREG)) );	// set SREG to 0
+ 166:bootSAH_5.c   **** 	asm volatile ( "jmp main");												// jump to main()
+ 167:bootSAH_5.c   **** }
+ 168:bootSAH_5.c   **** 
+ 169:bootSAH_5.c   **** //*	for watch dog timer startup
+ 170:bootSAH_5.c   **** void (*app_start)(void) = 0x0000;
+ 171:bootSAH_5.c   **** 
+ 172:bootSAH_5.c   **** int main(void)
+ 173:bootSAH_5.c   **** {
+ 174:bootSAH_5.c   **** 	uint32_t fMemStatus = 0;
+ 175:bootSAH_5.c   **** 	
+ 176:bootSAH_5.c   **** 	uint32_t fBStatAddr = 0;
+ 177:bootSAH_5.c   **** 	uint16_t fBootStat  = 0;
+ 178:bootSAH_5.c   **** 	
+ 179:bootSAH_5.c   **** 	uint32_t fDLenAddr  = 0;
+ 180:bootSAH_5.c   **** 	uint16_t fDataLen   = 0;
+ 181:bootSAH_5.c   **** 	
+ 182:bootSAH_5.c   **** 	uint32_t fDataAddr  = 0;
+ 183:bootSAH_5.c   **** 	uint8_t  fRdData    = 0;
+ 184:bootSAH_5.c   **** 	//uint8_t  fRdTries   = 0;
+ 185:bootSAH_5.c   **** 	
+ 186:bootSAH_5.c   **** 	uint32_t fCsumAddr  = 0;
+ 187:bootSAH_5.c   **** 	uint16_t fChSumCal  = 0;
+ 188:bootSAH_5.c   **** 	uint16_t fChSumRev  = 0;
+ 189:bootSAH_5.c   **** 	
+ 190:bootSAH_5.c   **** 	//address_t address	= 0;
+ 191:bootSAH_5.c   **** 	//address_t fPageAddr = 0;
+ 192:bootSAH_5.c   **** 	
+ 193:bootSAH_5.c   **** 	uint32_t ftempAddr	= 0;
+ 194:bootSAH_5.c   **** 	uint32_t fPageAddr  = 0;
+ 195:bootSAH_5.c   **** 	
+ 196:bootSAH_5.c   **** 	//unsigned char	msgBuffer[285];
+ 197:bootSAH_5.c   **** 	uint8_t flashBuff[256];
+ 198:bootSAH_5.c   **** 	//uint8_t	*p;
+ 199:bootSAH_5.c   **** 	
+ 200:bootSAH_5.c   **** 	uint8_t  fLSByte, fMSByte;
+ 201:bootSAH_5.c   **** 	uint16_t fDataWord;
+ 202:bootSAH_5.c   **** 	uint16_t fExMemSize, fInMemSize;
+ 203:bootSAH_5.c   **** 	uint16_t fExMemInc, fInMemInc;
+ 204:bootSAH_5.c   **** 		
+ 205:bootSAH_5.c   **** 		
+ 206:bootSAH_5.c   **** 
+ 207:bootSAH_5.c   **** //************************************************************************
+ 208:bootSAH_5.c   **** 	
+ 209:bootSAH_5.c   **** 	//*	some chips dont set the stack properly
+ 210:bootSAH_5.c   **** 	asm volatile ( ".set __stack, %0" :: "i" (RAMEND) );
+ 211:bootSAH_5.c   **** 	asm volatile ( "ldi	16, %0" :: "i" (RAMEND >> 8) );
+ 212:bootSAH_5.c   **** 	asm volatile ( "out %0,16" :: "i" (AVR_STACK_POINTER_HI_ADDR) );
+ 213:bootSAH_5.c   **** 	asm volatile ( "ldi	16, %0" :: "i" (RAMEND & 0x0ff) );
+ 214:bootSAH_5.c   **** 	asm volatile ( "out %0,16" :: "i" (AVR_STACK_POINTER_LO_ADDR) );
+ 215:bootSAH_5.c   **** 	
+ 216:bootSAH_5.c   **** //************************************************************************
+ 217:bootSAH_5.c   **** 
+ 218:bootSAH_5.c   **** //*	handle the watch dog timer
+ 219:bootSAH_5.c   **** 	uint8_t	mcuStatusReg;
+ 220:bootSAH_5.c   **** 	mcuStatusReg	=	MCUSR;
+ 221:bootSAH_5.c   **** 
+ 222:bootSAH_5.c   **** 	__asm__ __volatile__ ("cli");
+ 223:bootSAH_5.c   **** 	__asm__ __volatile__ ("wdr");
+ 224:bootSAH_5.c   **** 	//MCUSR	=	0;
+ 225:bootSAH_5.c   **** 	WDTCSR	|=	_BV(WDCE) | _BV(WDE);
+ 226:bootSAH_5.c   **** 	WDTCSR	=	0;
+ 227:bootSAH_5.c   **** 	__asm__ __volatile__ ("sei");
+ 228:bootSAH_5.c   **** 	// check if WDT generated the reset, if so, go straight to app
+ 229:bootSAH_5.c   **** 	if (mcuStatusReg & _BV(WDRF))
+ 230:bootSAH_5.c   **** 	{
+ 231:bootSAH_5.c   **** 		app_start();
+ 232:bootSAH_5.c   **** 	}
+ 233:bootSAH_5.c   **** 	
+ 234:bootSAH_5.c   **** //************************************************************************
+ 235:bootSAH_5.c   **** 
+ 236:bootSAH_5.c   **** //* Init UART
+ 237:bootSAH_5.c   **** //*set baudrate and enable USART receiver and transmiter without interrupts
+ 238:bootSAH_5.c   **** 
+ 239:bootSAH_5.c   **** // #if UART_BAUDRATE_DOUBLE_SPEED
+ 240:bootSAH_5.c   **** // 	UART_STATUS_REG		|=	(1 <<UART_DOUBLE_SPEED);
+ 241:bootSAH_5.c   **** // #endif
+ 242:bootSAH_5.c   **** // 	UART_BAUD_RATE_LOW	=	UART_BAUD_SELECT(BAUDRATE,F_CPU);
+ 243:bootSAH_5.c   **** // 	UART_CONTROL_REG	=	(1 << UART_ENABLE_RECEIVER) | (1 << UART_ENABLE_TRANSMITTER);
+ 244:bootSAH_5.c   **** // 
+ 245:bootSAH_5.c   **** // 	asm volatile ("nop");			// wait until port has changed
+ 246:bootSAH_5.c   **** 
+ 247:bootSAH_5.c   **** //************************************************************************
+ 248:bootSAH_5.c   **** 
+ 249:bootSAH_5.c   **** //* Init SPI
+ 250:bootSAH_5.c   **** 	SPI_DDR = (	(0<<SPI_MISO)|
+ 251:bootSAH_5.c   **** 				(1<<SPI_MOSI)|
+ 252:bootSAH_5.c   **** 				(1<<SPI_SCK) |
+ 253:bootSAH_5.c   **** 				(1<<SPI_CS)
+ 254:bootSAH_5.c   **** 			  );
+ 255:bootSAH_5.c   **** 
+ 256:bootSAH_5.c   **** 	SPCR = (	(1<<SPE) |              // SPI Enable
+ 257:bootSAH_5.c   **** 				(0<<SPIE)|              // SPI Interupt Enable
+ 258:bootSAH_5.c   **** 				(0<<DORD)|              // Data Order (0:MSB first / 1:LSB first)
+ 259:bootSAH_5.c   **** 				(1<<MSTR)|              // Master/Slave select
+ 260:bootSAH_5.c   **** 				(0<<SPR1)|(1<<SPR0)|    // SPI Clock Rate
+ 261:bootSAH_5.c   **** 				(0<<CPOL)|              // Clock Polarity (0:SCK low / 1:SCK hi when idle)
+ 262:bootSAH_5.c   **** 				(0<<CPHA)               // Clock Phase (0:leading / 1:trailing edge sampling)
+ 263:bootSAH_5.c   **** 			);
+ 264:bootSAH_5.c   **** 			
+ 265:bootSAH_5.c   **** 	SPI_PORT |=  (1<<SPI_CS); 			// pull high
+ 266:bootSAH_5.c   **** 	
+ 267:bootSAH_5.c   **** 	asm volatile ("nop");				// wait until port has changed
+ 268:bootSAH_5.c   **** 	
+ 269:bootSAH_5.c   **** //************************************************************************
+ 270:bootSAH_5.c   **** 
+ 271:bootSAH_5.c   **** /*	
+ 272:bootSAH_5.c   **** #ifdef _DEBUG_SERIAL_
+ 273:bootSAH_5.c   **** 
+ 274:bootSAH_5.c   **** 	sendchar('u');
+ 275:bootSAH_5.c   **** 	sendchar('t');
+ 276:bootSAH_5.c   **** 	sendchar('e');
+ 277:bootSAH_5.c   **** 	sendchar('c');
+ 278:bootSAH_5.c   **** 	sendchar('h');
+ 279:bootSAH_5.c   **** 	sendchar('_');
+ 280:bootSAH_5.c   **** 	sendchar('B');
+ 281:bootSAH_5.c   **** 	sendchar('B');
+ 282:bootSAH_5.c   **** 
+ 283:bootSAH_5.c   **** 	sendchar(0x0d);
+ 284:bootSAH_5.c   **** 	sendchar(0x0a);
+ 285:bootSAH_5.c   **** 
+ 286:bootSAH_5.c   **** 	delay_ms(100);
+ 287:bootSAH_5.c   **** #endif
+ 288:bootSAH_5.c   **** */
+ 289:bootSAH_5.c   **** 
+ 290:bootSAH_5.c   **** 	fBStatAddr = 4096;
+ 291:bootSAH_5.c   **** 	fDLenAddr  = 4098;
+ 292:bootSAH_5.c   **** 	fDataAddr  = 8192;
+ 293:bootSAH_5.c   **** 	fCsumAddr  = 4352;
+ 294:bootSAH_5.c   **** 	fPageAddr  = 0;
+ 295:bootSAH_5.c   **** 	
+ 296:bootSAH_5.c   **** //************************************************************************	
+ 297:bootSAH_5.c   **** //* Init ExFlash
+ 298:bootSAH_5.c   **** 	FLASH_UntilReady();
+ 299:bootSAH_5.c   **** 	FLASH_ResetEnable();
+ 300:bootSAH_5.c   **** 	FLASH_Reset();
+ 301:bootSAH_5.c   **** 	
+ 302:bootSAH_5.c   **** 	SPI_PORT  &=  ~(1<<SPI_CS);
+ 303:bootSAH_5.c   **** 	SPI_Transfer(0x9F);
+ 304:bootSAH_5.c   **** 	fMemStatus = (uint32_t)SPI_Transfer(0) << 16;
+ 305:bootSAH_5.c   **** 	fMemStatus |= (uint32_t)SPI_Transfer(0) << 8;
+ 306:bootSAH_5.c   **** 	fMemStatus |= (uint32_t)SPI_Transfer(0);
+ 307:bootSAH_5.c   **** 	SPI_PORT |=  (1<<SPI_CS);
+ 308:bootSAH_5.c   **** 
+ 309:bootSAH_5.c   **** 	if(fMemStatus == EXMEM_JEDEC)
+ 310:bootSAH_5.c   **** 	{
+ 311:bootSAH_5.c   **** 		SPI_PORT  &=  ~(1<<SPI_CS);
+ 312:bootSAH_5.c   **** 		SPI_Transfer(0x03);
+ 313:bootSAH_5.c   **** 		SPI_Transfer((fBStatAddr >> 16) & 0xff);
+ 314:bootSAH_5.c   **** 		SPI_Transfer((fBStatAddr >> 8) & 0xff);
+ 315:bootSAH_5.c   **** 		SPI_Transfer(fBStatAddr & 0xff);
+ 316:bootSAH_5.c   **** 		fBootStat = (uint16_t)SPI_Transfer(0) << 8;
+ 317:bootSAH_5.c   **** 		fBootStat |= (uint16_t)SPI_Transfer(0);
+ 318:bootSAH_5.c   **** 		SPI_PORT  |=   (1<<SPI_CS);
+ 319:bootSAH_5.c   **** 		tiny_delay();
+ 320:bootSAH_5.c   **** 
+ 321:bootSAH_5.c   **** 
+ 322:bootSAH_5.c   **** 		if(fBootStat == 0x2323)
+ 323:bootSAH_5.c   **** 		{
+ 324:bootSAH_5.c   **** 			
+ 325:bootSAH_5.c   **** 			SPI_PORT  &=  ~(1<<SPI_CS);
+ 326:bootSAH_5.c   **** 			SPI_Transfer(0x03);
+ 327:bootSAH_5.c   **** 			SPI_Transfer((fDLenAddr >> 16) & 0xff);
+ 328:bootSAH_5.c   **** 			SPI_Transfer((fDLenAddr >> 8) & 0xff);
+ 329:bootSAH_5.c   **** 			SPI_Transfer(fDLenAddr & 0xff);
+ 330:bootSAH_5.c   **** 			fDataLen = (uint16_t)SPI_Transfer(0) << 8;
+ 331:bootSAH_5.c   **** 			fDataLen |= (uint16_t)SPI_Transfer(0);
+ 332:bootSAH_5.c   **** 			SPI_PORT  |=   (1<<SPI_CS);
+ 333:bootSAH_5.c   **** 			tiny_delay();
+ 334:bootSAH_5.c   **** 
+ 335:bootSAH_5.c   **** 			do 
+ 336:bootSAH_5.c   **** 			{
+ 337:bootSAH_5.c   **** 				
+ 338:bootSAH_5.c   **** 				fExMemSize = EXMEM_PAGE_SIZE;
+ 339:bootSAH_5.c   **** 				fExMemInc = 0;
+ 340:bootSAH_5.c   **** 				//fRdTries  = 0;
+ 341:bootSAH_5.c   **** 				fChSumCal = 0;
+ 342:bootSAH_5.c   **** 				SPI_PORT  &=  ~(1<<SPI_CS);
+ 343:bootSAH_5.c   **** 				SPI_Transfer(0x03);
+ 344:bootSAH_5.c   **** 				SPI_Transfer((fDataAddr >> 16) & 0xff);
+ 345:bootSAH_5.c   **** 				SPI_Transfer((fDataAddr >> 8) & 0xff);
+ 346:bootSAH_5.c   **** 				SPI_Transfer(fDataAddr & 0xff);			
+ 347:bootSAH_5.c   **** 				do 
+ 348:bootSAH_5.c   **** 				{
+ 349:bootSAH_5.c   **** 					fRdData = SPI_Transfer(0);
+ 350:bootSAH_5.c   **** 					flashBuff[fExMemInc++] = fRdData;
+ 351:bootSAH_5.c   **** 					fChSumCal += fRdData;				
+ 352:bootSAH_5.c   **** 					fExMemSize--;
+ 353:bootSAH_5.c   **** 				} while (fExMemSize);		
+ 354:bootSAH_5.c   **** 				SPI_PORT  |=   (1<<SPI_CS);
+ 355:bootSAH_5.c   **** 				tiny_delay();
+ 356:bootSAH_5.c   **** 
+ 357:bootSAH_5.c   **** 		
+ 358:bootSAH_5.c   **** 				SPI_PORT  &=  ~(1<<SPI_CS);
+ 359:bootSAH_5.c   **** 				SPI_Transfer(0x03);
+ 360:bootSAH_5.c   **** 				SPI_Transfer((fCsumAddr >> 16) & 0xff);
+ 361:bootSAH_5.c   **** 				SPI_Transfer((fCsumAddr >> 8) & 0xff);
+ 362:bootSAH_5.c   **** 				SPI_Transfer(fCsumAddr & 0xff);				
+ 363:bootSAH_5.c   **** 				fChSumRev = (uint16_t)SPI_Transfer(0) << 8;
+ 364:bootSAH_5.c   **** 				fChSumRev |= (uint16_t)SPI_Transfer(0);			
+ 365:bootSAH_5.c   **** 				SPI_PORT  |=   (1<<SPI_CS);
+ 366:bootSAH_5.c   **** 				tiny_delay();
+ 367:bootSAH_5.c   **** 		
+ 368:bootSAH_5.c   **** 				if(fChSumRev != fChSumCal)
+ 369:bootSAH_5.c   **** 				{
+ 370:bootSAH_5.c   **** 
+ 371:bootSAH_5.c   **** 					break;
+ 372:bootSAH_5.c   **** 				}
+ 373:bootSAH_5.c   **** 				
+ 374:bootSAH_5.c   ****  				ftempAddr  = fPageAddr;
+ 375:bootSAH_5.c   ****  				fInMemSize = SPM_PAGESIZE;
+ 376:bootSAH_5.c   ****  				fInMemInc  = 0;
+ 377:bootSAH_5.c   **** 				 
+ 378:bootSAH_5.c   **** 				if (fPageAddr >= APP_END )
+ 379:bootSAH_5.c   **** 				{
+ 380:bootSAH_5.c   **** 					break;
+ 381:bootSAH_5.c   **** 				}
+ 382:bootSAH_5.c   **** 					
+ 383:bootSAH_5.c   **** 				boot_page_erase_safe(fPageAddr);
+ 384:bootSAH_5.c   **** 				boot_spm_busy_wait();			
+ 385:bootSAH_5.c   **** 					
+ 386:bootSAH_5.c   **** 				do 
+ 387:bootSAH_5.c   **** 				{
+ 388:bootSAH_5.c   **** 					fLSByte = flashBuff[fInMemInc];
+ 389:bootSAH_5.c   **** 					fInMemInc++;
+ 390:bootSAH_5.c   **** 					fMSByte = flashBuff[fInMemInc];
+ 391:bootSAH_5.c   **** 					fInMemInc++;
+ 392:bootSAH_5.c   **** 
+ 393:bootSAH_5.c   **** 					fDataWord = (fMSByte << 8) | fLSByte;
+ 394:bootSAH_5.c   **** 						
+ 395:bootSAH_5.c   **** 					boot_page_fill_safe(ftempAddr,fDataWord);
+ 396:bootSAH_5.c   **** 					
+ 397:bootSAH_5.c   **** 						
+ 398:bootSAH_5.c   **** 					ftempAddr  = ftempAddr + 2;
+ 399:bootSAH_5.c   **** 					asm volatile ("nop");	
+ 400:bootSAH_5.c   **** 					fInMemSize = fInMemSize - 2;
+ 401:bootSAH_5.c   **** 				} while (fInMemSize);
+ 402:bootSAH_5.c   **** 					
+ 403:bootSAH_5.c   **** 				boot_page_write_safe(fPageAddr);
+ 404:bootSAH_5.c   **** 				boot_spm_busy_wait();
+ 405:bootSAH_5.c   **** 				boot_rww_enable_safe();
+ 406:bootSAH_5.c   **** 					
+ 407:bootSAH_5.c   **** 				fPageAddr += SPM_PAGESIZE;
+ 408:bootSAH_5.c   **** 				fDataAddr += EXMEM_PAGE_SIZE;
+ 409:bootSAH_5.c   **** 				fCsumAddr += 2;
+ 410:bootSAH_5.c   **** 				asm volatile ("nop");
+ 411:bootSAH_5.c   **** 				
+ 412:bootSAH_5.c   **** 				fDataLen--;
+ 413:bootSAH_5.c   **** 			} while (fDataLen);
+ 414:bootSAH_5.c   **** 			
+ 415:bootSAH_5.c   **** 			tiny_delay();
+ 416:bootSAH_5.c   **** 			FLASH_EraseSector(fBStatAddr);						
+ 417:bootSAH_5.c   **** 		}
+ 418:bootSAH_5.c   **** 	}
+ 419:bootSAH_5.c   **** 	
+ 420:bootSAH_5.c   **** 	tiny_delay();
+ 421:bootSAH_5.c   **** 	
+ 422:bootSAH_5.c   **** 	boot_rww_enable_safe();				// enable application section
+ 423:bootSAH_5.c   **** 
+ 424:bootSAH_5.c   **** 	// leaving bootloader  # bye bye # sayonara #
+ 425:bootSAH_5.c   **** 	asm volatile(
+ 426:bootSAH_5.c   **** 					"clr	r30		\n\t"
+ 427:bootSAH_5.c   **** 					"clr	r31		\n\t"
+ 428:bootSAH_5.c   **** 					"ijmp			\n\t"
+ 429:bootSAH_5.c   **** 				);
+ 430:bootSAH_5.c   **** 	
+ 431:bootSAH_5.c   ****     for(;;)
+ 432:bootSAH_5.c   ****     {		
+ 433:bootSAH_5.c   **** 		tiny_delay();
+ 434:bootSAH_5.c   ****     }
+ 435:bootSAH_5.c   **** }
+ 436:bootSAH_5.c   **** 
+ 437:bootSAH_5.c   **** 
+ 438:bootSAH_5.c   **** 
+ 439:bootSAH_5.c   **** 
+ 440:bootSAH_5.c   **** //*****************************************************************************
+ 441:bootSAH_5.c   **** void delay_ms(unsigned int timedelay)
+ 442:bootSAH_5.c   **** {
+ 443:bootSAH_5.c   **** 	unsigned int i;
+ 444:bootSAH_5.c   **** 	for (i=0;i<timedelay;i++)
+ 445:bootSAH_5.c   **** 	{
+ 446:bootSAH_5.c   **** 		_delay_ms(0.5);
+ 447:bootSAH_5.c   **** 	}
+ 448:bootSAH_5.c   **** }
+ 449:bootSAH_5.c   **** //** small delay
+ 450:bootSAH_5.c   **** void tiny_delay()		
+ 451:bootSAH_5.c   **** {
+ 452:bootSAH_5.c   **** 	asm volatile(
+ 453:bootSAH_5.c   **** 					"nop	\n\t"
+ 454:bootSAH_5.c   **** 					"nop	\n\t"
+ 455:bootSAH_5.c   **** 					"nop	\n\t"
+ 456:bootSAH_5.c   **** 					"nop	\n\t"
+ 457:bootSAH_5.c   **** 					"nop	\n\t"
+ 458:bootSAH_5.c   **** 				); 
+ 459:bootSAH_5.c   **** }
+ 460:bootSAH_5.c   ****    
+ 461:bootSAH_5.c   **** 
+ 462:bootSAH_5.c   **** //*****************************************************************************
+ 463:bootSAH_5.c   **** 
+ 464:bootSAH_5.c   **** 
+ 465:bootSAH_5.c   **** 
+ 466:bootSAH_5.c   **** //************************************************************************
+ 467:bootSAH_5.c   **** 
+ 468:bootSAH_5.c   **** /*
+ 469:bootSAH_5.c   **** static int	Serial_Available(void)
+ 470:bootSAH_5.c   **** {
+ 471:bootSAH_5.c   **** 	return(UART_STATUS_REG & (1 << UART_RECEIVE_COMPLETE));	// wait for data
+ 472:bootSAH_5.c   **** }
+ 473:bootSAH_5.c   **** 
+ 474:bootSAH_5.c   **** static unsigned char recchar(void)
+ 475:bootSAH_5.c   **** {
+ 476:bootSAH_5.c   **** 	while (!(UART_STATUS_REG & (1 << UART_RECEIVE_COMPLETE)))
+ 477:bootSAH_5.c   **** 	{
+ 478:bootSAH_5.c   **** 		// wait for data
+ 479:bootSAH_5.c   **** 	}
+ 480:bootSAH_5.c   **** 	return UART_DATA_REG;
+ 481:bootSAH_5.c   **** }
+ 482:bootSAH_5.c   **** */
+ 483:bootSAH_5.c   **** static uint8_t SPI_Transfer(uint8_t spidata)
+ 484:bootSAH_5.c   **** {
+  15               		.loc 1 484 0
+  16               		.cfi_startproc
+  17               	.LVL0:
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+ 485:bootSAH_5.c   **** 	SPDR = spidata;
+  22               		.loc 1 485 0
+  23 0000 8EBD      		out 0x2e,r24
+ 486:bootSAH_5.c   **** 	asm volatile("nop");			// small delay
+  24               		.loc 1 486 0
+  25               	/* #APP */
+  26               	 ;  486 "bootSAH_5.c" 1
+  27 0002 0000      		nop
+  28               	 ;  0 "" 2
+  29               	/* #NOAPP */
+  30               	.L2:
+ 487:bootSAH_5.c   **** 	while(!(SPSR & (1<<SPIF)));		// Wait for transmission complete
+  31               		.loc 1 487 0 discriminator 1
+  32 0004 0DB4      		in __tmp_reg__,0x2d
+  33 0006 07FE      		sbrs __tmp_reg__,7
+  34 0008 00C0      		rjmp .L2
+ 488:bootSAH_5.c   **** 
+ 489:bootSAH_5.c   **** 	return SPDR;
+  35               		.loc 1 489 0
+  36 000a 8EB5      		in r24,0x2e
+  37               	.LVL1:
+ 490:bootSAH_5.c   **** }
+  38               		.loc 1 490 0
+  39 000c 0895      		ret
+  40               		.cfi_endproc
+  41               	.LFE15:
+  43               		.section	.init9,"ax",@progbits
+  44               	.global	__jumpMain
+  46               	__jumpMain:
+  47               	.LFB11:
+ 150:bootSAH_5.c   **** //*	July 17, 2010	<MLS> Added stack pointer initialzation
+  48               		.loc 1 150 0
+  49               		.cfi_startproc
+  50               	/* prologue: naked */
+  51               	/* frame size = 0 */
+  52               	/* stack size = 0 */
+  53               	.L__stack_usage = 0
+ 154:bootSAH_5.c   **** 
+  54               		.loc 1 154 0
+  55               	/* #APP */
+  56               	 ;  154 "bootSAH_5.c" 1
+  57               		.set __stack, 8703
+  58               	 ;  0 "" 2
+ 158:bootSAH_5.c   **** 	asm volatile ( "out %0,16" :: "i" (AVR_STACK_POINTER_HI_ADDR) );
+  59               		.loc 1 158 0
+  60               	 ;  158 "bootSAH_5.c" 1
+  61 0000 01E2      		ldi	16, 33
+  62               	 ;  0 "" 2
+ 159:bootSAH_5.c   **** 
+  63               		.loc 1 159 0
+  64               	 ;  159 "bootSAH_5.c" 1
+  65 0002 0EBF      		out 62,16
+  66               	 ;  0 "" 2
+ 161:bootSAH_5.c   **** 	asm volatile ( "out %0,16" :: "i" (AVR_STACK_POINTER_LO_ADDR) );
+  67               		.loc 1 161 0
+  68               	 ;  161 "bootSAH_5.c" 1
+  69 0004 0FEF      		ldi	16, 255
+  70               	 ;  0 "" 2
+ 162:bootSAH_5.c   **** 
+  71               		.loc 1 162 0
+  72               	 ;  162 "bootSAH_5.c" 1
+  73 0006 0DBF      		out 61,16
+  74               	 ;  0 "" 2
+ 164:bootSAH_5.c   **** 	asm volatile ( "out %0, __zero_reg__" :: "I" (_SFR_IO_ADDR(SREG)) );	// set SREG to 0
+  75               		.loc 1 164 0
+  76               	 ;  164 "bootSAH_5.c" 1
+  77 0008 1124      		clr __zero_reg__
+  78               	 ;  0 "" 2
+ 165:bootSAH_5.c   **** 	asm volatile ( "jmp main");												// jump to main()
+  79               		.loc 1 165 0
+  80               	 ;  165 "bootSAH_5.c" 1
+  81 000a 1FBE      		out 63, __zero_reg__
+  82               	 ;  0 "" 2
+ 166:bootSAH_5.c   **** }
+  83               		.loc 1 166 0
+  84               	 ;  166 "bootSAH_5.c" 1
+  85 000c 0C94 0000 		jmp main
+  86               	 ;  0 "" 2
+  87               	/* epilogue start */
+ 167:bootSAH_5.c   **** 
+  88               		.loc 1 167 0
+  89               	/* #NOAPP */
+  90               		.cfi_endproc
+  91               	.LFE11:
+  93               		.text
+  94               	.global	delay_ms
+  96               	delay_ms:
+  97               	.LFB13:
+ 442:bootSAH_5.c   **** 	unsigned int i;
+  98               		.loc 1 442 0
+  99               		.cfi_startproc
+ 100               	.LVL2:
+ 101               	/* prologue: function */
+ 102               	/* frame size = 0 */
+ 103               	/* stack size = 0 */
+ 104               	.L__stack_usage = 0
+ 444:bootSAH_5.c   **** 	{
+ 105               		.loc 1 444 0
+ 106 000e 20E0      		ldi r18,0
+ 107 0010 30E0      		ldi r19,0
+ 108               	.LVL3:
+ 109               	.L7:
+ 444:bootSAH_5.c   **** 	{
+ 110               		.loc 1 444 0 is_stmt 0 discriminator 1
+ 111 0012 2817      		cp r18,r24
+ 112 0014 3907      		cpc r19,r25
+ 113 0016 01F0      		breq .L9
+ 114               	.LVL4:
+ 115               	.LBB4:
+ 116               	.LBB5:
+ 117               		.file 2 "e:\\programfiles\\atmelstudio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\include\\ut
+   1:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /* Copyright (c) 2002, Marek Michalkiewicz
+   2:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Copyright (c) 2004,2005,2007 Joerg Wunsch
+   3:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Copyright (c) 2007  Florin-Viorel Petrov
+   4:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    All rights reserved.
+   5:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+   6:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Redistribution and use in source and binary forms, with or without
+   7:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    modification, are permitted provided that the following conditions are met:
+   8:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+   9:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    * Redistributions of source code must retain the above copyright
+  10:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      notice, this list of conditions and the following disclaimer.
+  11:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  12:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    * Redistributions in binary form must reproduce the above copyright
+  13:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      notice, this list of conditions and the following disclaimer in
+  14:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      the documentation and/or other materials provided with the
+  15:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      distribution.
+  16:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  17:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    * Neither the name of the copyright holders nor the names of
+  18:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      contributors may be used to endorse or promote products derived
+  19:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      from this software without specific prior written permission.
+  20:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  21:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  25:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  32:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  33:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /* $Id$ */
+  34:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  35:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef _UTIL_DELAY_H_
+  36:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #define _UTIL_DELAY_H_ 1
+  37:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  38:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef __DOXYGEN__
+  39:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #  ifndef __HAS_DELAY_CYCLES
+  40:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #    define __HAS_DELAY_CYCLES 1
+  41:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #  endif
+  42:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif  /* __DOXYGEN__ */
+  43:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  44:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #include <inttypes.h>
+  45:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #include <util/delay_basic.h>
+  46:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #include <math.h>
+  47:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  48:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /** \file */
+  49:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /** \defgroup util_delay <util/delay.h>: Convenience functions for busy-wait delay loops
+  50:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     \code
+  51:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     #define F_CPU 1000000UL  // 1 MHz
+  52:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     //#define F_CPU 14.7456E6
+  53:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     #include <util/delay.h>
+  54:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     \endcode
+  55:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  56:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     \note As an alternative method, it is possible to pass the
+  57:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     F_CPU macro down to the compiler from the Makefile.
+  58:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     Obviously, in that case, no \c \#define statement should be
+  59:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     used.
+  60:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  61:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     The functions in this header file are wrappers around the basic
+  62:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     busy-wait functions from <util/delay_basic.h>.  They are meant as
+  63:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     convenience functions where actual time values can be specified
+  64:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     rather than a number of cycles to wait for.  The idea behind is
+  65:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     that compile-time constant expressions will be eliminated by
+  66:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     compiler optimization so floating-point expressions can be used
+  67:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     to calculate the number of delay cycles needed based on the CPU
+  68:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     frequency passed by the macro F_CPU.
+  69:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  70:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     \note In order for these functions to work as intended, compiler
+  71:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     optimizations <em>must</em> be enabled, and the delay time
+  72:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     <em>must</em> be an expression that is a known constant at
+  73:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     compile-time.  If these requirements are not met, the resulting
+  74:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     delay will be much longer (and basically unpredictable), and
+  75:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     applications that otherwise do not use floating-point calculations
+  76:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     will experience severe code bloat by the floating-point library
+  77:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     routines linked into the application.
+  78:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  79:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     The functions available allow the specification of microsecond, and
+  80:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     millisecond delays directly, using the application-supplied macro
+  81:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     F_CPU as the CPU clock frequency (in Hertz).
+  82:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  83:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** */
+  84:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  85:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #if !defined(__DOXYGEN__)
+  86:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** static __inline__ void _delay_us(double __us) __attribute__((__always_inline__));
+  87:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** static __inline__ void _delay_ms(double __ms) __attribute__((__always_inline__));
+  88:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+  89:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  90:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef F_CPU
+  91:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /* prevent compiler error by supplying a default */
+  92:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** # warning "F_CPU not defined for <util/delay.h>"
+  93:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /** \ingroup util_delay
+  94:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     \def F_CPU
+  95:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     \brief CPU frequency in Hz
+  96:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  97:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     The macro F_CPU specifies the CPU frequency to be considered by
+  98:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     the delay macros.  This macro is normally supplied by the
+  99:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     environment (e.g. from within a project header, or the project's
+ 100:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     Makefile).  The value 1 MHz here is only provided as a "vanilla"
+ 101:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     fallback if no such user-provided definition could be found.
+ 102:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 103:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     In terms of the delay functions, the CPU frequency can be given as
+ 104:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     a floating-point constant (e.g. 3.6864E6 for 3.6864 MHz).
+ 105:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     However, the macros in <util/setbaud.h> require it to be an
+ 106:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     integer value.
+ 107:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****  */
+ 108:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** # define F_CPU 1000000UL
+ 109:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+ 110:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 111:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef __OPTIMIZE__
+ 112:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+ 113:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+ 114:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 115:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 116:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 117:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   __STDC_HOSTED__
+ 118:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #  include <math.h>
+ 119:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+ 120:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 121:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /**
+ 122:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    \ingroup util_delay
+ 123:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 124:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Perform a delay of \c __ms milliseconds, using _delay_loop_2().
+ 125:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 126:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    The macro F_CPU is supposed to be defined to a
+ 127:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 128:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 129:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    The maximal possible delay is 262.14 ms / F_CPU in MHz.
+ 130:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 131:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    When the user request delay which exceed the maximum possible one,
+ 132:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    _delay_ms() provides a decreased resolution functionality. In this
+ 133:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    mode _delay_ms() will work with a resolution of 1/10 ms, providing
+ 134:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    delays up to 6.5535 seconds (independent from CPU frequency).  The
+ 135:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    user will not be informed about decreased resolution.
+ 136:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 137:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    If the avr-gcc toolchain has __builtin_avr_delay_cycles()
+ 138:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    support, maximal possible delay is 4294967.295 ms/ F_CPU in MHz. For
+ 139:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    values greater than the maximal possible delay, overflows results in
+ 140:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    no delay i.e., 0ms.
+ 141:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 142:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Conversion of \c __ms into clock cycles may not always result in
+ 143:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    integer.  By default, the clock cycles rounded up to next
+ 144:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    integer. This ensures that the user gets at least \c __ms
+ 145:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    microseconds of delay.
+ 146:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 147:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Alternatively, by defining the macro \c __DELAY_ROUND_DOWN__, or
+ 148:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    \c __DELAY_ROUND_CLOSEST__, before including this header file, the
+ 149:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    algorithm can be made to round down, or round to closest integer,
+ 150:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    respectively.
+ 151:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 152:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    \note
+ 153:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 154:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    The implementation of _delay_ms() based on
+ 155:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    __builtin_avr_delay_cycles() is not backward compatible with older
+ 156:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    implementations.  In order to get functionality backward compatible
+ 157:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    with previous versions, the macro \c "__DELAY_BACKWARD_COMPATIBLE__"
+ 158:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    must be defined before including this header file. Also, the
+ 159:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    backward compatible algorithm will be chosen if the code is
+ 160:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    compiled in a <em>freestanding environment</em> (GCC option
+ 161:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    \c -ffreestanding), as the math functions required for rounding are
+ 162:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    not available to the compiler then.
+ 163:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 164:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****  */
+ 165:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** void
+ 166:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** _delay_ms(double __ms)
+ 167:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** {
+ 168:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	double __tmp ;
+ 169:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 170:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 171:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   __STDC_HOSTED__
+ 172:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	uint32_t __ticks_dc;
+ 173:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	extern void __builtin_avr_delay_cycles(unsigned long);
+ 174:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__tmp = ((F_CPU) / 1e3) * __ms;
+ 175:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 176:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#if defined(__DELAY_ROUND_DOWN__)
+ 177:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)fabs(__tmp);
+ 178:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 179:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#elif defined(__DELAY_ROUND_CLOSEST__)
+ 180:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)(fabs(__tmp)+0.5);
+ 181:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 182:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#else
+ 183:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		//round up by default
+ 184:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+ 185:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#endif
+ 186:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 187:e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__builtin_avr_delay_cycles(__ticks_dc);
+ 118               		.loc 2 187 0 is_stmt 1
+ 119 0018 EFEC      		ldi r30,lo8(1999)
+ 120 001a F7E0      		ldi r31,hi8(1999)
+ 121 001c 3197      	1:	sbiw r30,1
+ 122 001e 01F4      		brne 1b
+ 123 0020 00C0      		rjmp .
+ 124 0022 0000      		nop
+ 125               	.LVL5:
+ 126               	.LBE5:
+ 127               	.LBE4:
+ 444:bootSAH_5.c   **** 	{
+ 128               		.loc 1 444 0
+ 129 0024 2F5F      		subi r18,-1
+ 130 0026 3F4F      		sbci r19,-1
+ 131               	.LVL6:
+ 132 0028 00C0      		rjmp .L7
+ 133               	.L9:
+ 134               	/* epilogue start */
+ 448:bootSAH_5.c   **** //** small delay
+ 135               		.loc 1 448 0
+ 136 002a 0895      		ret
+ 137               		.cfi_endproc
+ 138               	.LFE13:
+ 140               	.global	tiny_delay
+ 142               	tiny_delay:
+ 143               	.LFB14:
+ 451:bootSAH_5.c   **** 	asm volatile(
+ 144               		.loc 1 451 0
+ 145               		.cfi_startproc
+ 146               	/* prologue: function */
+ 147               	/* frame size = 0 */
+ 148               	/* stack size = 0 */
+ 149               	.L__stack_usage = 0
+ 452:bootSAH_5.c   **** 					"nop	\n\t"
+ 150               		.loc 1 452 0
+ 151               	/* #APP */
+ 152               	 ;  452 "bootSAH_5.c" 1
+ 153 002c 0000      		nop	
+ 154 002e 0000      		nop	
+ 155 0030 0000      		nop	
+ 156 0032 0000      		nop	
+ 157 0034 0000      		nop	
+ 158               		
+ 159               	 ;  0 "" 2
+ 160               	/* #NOAPP */
+ 161 0036 0895      		ret
+ 162               		.cfi_endproc
+ 163               	.LFE14:
+ 165               	.global	FLASH_UntilReady
+ 167               	FLASH_UntilReady:
+ 168               	.LFB16:
+ 491:bootSAH_5.c   **** 
+ 492:bootSAH_5.c   **** void FLASH_UntilReady()
+ 493:bootSAH_5.c   **** {
+ 169               		.loc 1 493 0
+ 170               		.cfi_startproc
+ 171               	/* prologue: function */
+ 172               	/* frame size = 0 */
+ 173               	/* stack size = 0 */
+ 174               	.L__stack_usage = 0
+ 175               	.LVL7:
+ 494:bootSAH_5.c   **** 	uint8_t stat=0xff;
+ 495:bootSAH_5.c   **** 	SPI_PORT  &=  ~(1<<SPI_CS);
+ 176               		.loc 1 495 0
+ 177 0038 2898      		cbi 0x5,0
+ 496:bootSAH_5.c   **** 	SPI_Transfer(0x05);
+ 178               		.loc 1 496 0
+ 179 003a 85E0      		ldi r24,lo8(5)
+ 180 003c 0E94 0000 		call SPI_Transfer
+ 181               	.LVL8:
+ 494:bootSAH_5.c   **** 	uint8_t stat=0xff;
+ 182               		.loc 1 494 0
+ 183 0040 8FEF      		ldi r24,lo8(-1)
+ 184               	.LVL9:
+ 185               	.L12:
+ 497:bootSAH_5.c   **** 	while((stat & 0x01) == 0x01)
+ 186               		.loc 1 497 0
+ 187 0042 80FF      		sbrs r24,0
+ 188 0044 00C0      		rjmp .L14
+ 498:bootSAH_5.c   **** 	{
+ 499:bootSAH_5.c   **** 		stat = SPI_Transfer(0);
+ 189               		.loc 1 499 0
+ 190 0046 80E0      		ldi r24,0
+ 191 0048 0E94 0000 		call SPI_Transfer
+ 192               	.LVL10:
+ 193 004c 00C0      		rjmp .L12
+ 194               	.LVL11:
+ 195               	.L14:
+ 500:bootSAH_5.c   **** 	}
+ 501:bootSAH_5.c   **** 	SPI_PORT  |=   (1<<SPI_CS);
+ 196               		.loc 1 501 0
+ 197 004e 289A      		sbi 0x5,0
+ 502:bootSAH_5.c   **** 	tiny_delay();
+ 198               		.loc 1 502 0
+ 199 0050 0C94 0000 		jmp tiny_delay
+ 200               	.LVL12:
+ 201               		.cfi_endproc
+ 202               	.LFE16:
+ 204               	.global	FLASH_ResetEnable
+ 206               	FLASH_ResetEnable:
+ 207               	.LFB17:
+ 503:bootSAH_5.c   **** }
+ 504:bootSAH_5.c   **** 
+ 505:bootSAH_5.c   **** void FLASH_ResetEnable()
+ 506:bootSAH_5.c   **** {
+ 208               		.loc 1 506 0
+ 209               		.cfi_startproc
+ 210               	/* prologue: function */
+ 211               	/* frame size = 0 */
+ 212               	/* stack size = 0 */
+ 213               	.L__stack_usage = 0
+ 507:bootSAH_5.c   **** 	SPI_PORT  &=  ~(1<<SPI_CS);
+ 214               		.loc 1 507 0
+ 215 0054 2898      		cbi 0x5,0
+ 508:bootSAH_5.c   **** 	SPI_Transfer(0x66);
+ 216               		.loc 1 508 0
+ 217 0056 86E6      		ldi r24,lo8(102)
+ 218 0058 0E94 0000 		call SPI_Transfer
+ 219               	.LVL13:
+ 509:bootSAH_5.c   **** 	SPI_PORT  |=   (1<<SPI_CS);
+ 220               		.loc 1 509 0
+ 221 005c 289A      		sbi 0x5,0
+ 510:bootSAH_5.c   **** 	tiny_delay();
+ 222               		.loc 1 510 0
+ 223 005e 0C94 0000 		jmp tiny_delay
+ 224               	.LVL14:
+ 225               		.cfi_endproc
+ 226               	.LFE17:
+ 228               	.global	FLASH_Reset
+ 230               	FLASH_Reset:
+ 231               	.LFB18:
+ 511:bootSAH_5.c   **** }
+ 512:bootSAH_5.c   **** 
+ 513:bootSAH_5.c   **** void FLASH_Reset()
+ 514:bootSAH_5.c   **** {
+ 232               		.loc 1 514 0
+ 233               		.cfi_startproc
+ 234               	/* prologue: function */
+ 235               	/* frame size = 0 */
+ 236               	/* stack size = 0 */
+ 237               	.L__stack_usage = 0
+ 515:bootSAH_5.c   **** 	SPI_PORT  &=  ~(1<<SPI_CS);
+ 238               		.loc 1 515 0
+ 239 0062 2898      		cbi 0x5,0
+ 516:bootSAH_5.c   **** 	SPI_Transfer(0x99);
+ 240               		.loc 1 516 0
+ 241 0064 89E9      		ldi r24,lo8(-103)
+ 242 0066 0E94 0000 		call SPI_Transfer
+ 243               	.LVL15:
+ 517:bootSAH_5.c   **** 	SPI_PORT  |=   (1<<SPI_CS);
+ 244               		.loc 1 517 0
+ 245 006a 289A      		sbi 0x5,0
+ 518:bootSAH_5.c   **** 	tiny_delay();
+ 246               		.loc 1 518 0
+ 247 006c 0C94 0000 		jmp tiny_delay
+ 248               	.LVL16:
+ 249               		.cfi_endproc
+ 250               	.LFE18:
+ 252               	.global	FLASH_WriteEnable
+ 254               	FLASH_WriteEnable:
+ 255               	.LFB19:
+ 519:bootSAH_5.c   **** }
+ 520:bootSAH_5.c   **** 
+ 521:bootSAH_5.c   **** void FLASH_WriteEnable()
+ 522:bootSAH_5.c   **** {
+ 256               		.loc 1 522 0
+ 257               		.cfi_startproc
+ 258               	/* prologue: function */
+ 259               	/* frame size = 0 */
+ 260               	/* stack size = 0 */
+ 261               	.L__stack_usage = 0
+ 523:bootSAH_5.c   **** 	SPI_PORT  &=  ~(1<<SPI_CS);
+ 262               		.loc 1 523 0
+ 263 0070 2898      		cbi 0x5,0
+ 524:bootSAH_5.c   **** 	SPI_Transfer(0x06);
+ 264               		.loc 1 524 0
+ 265 0072 86E0      		ldi r24,lo8(6)
+ 266 0074 0E94 0000 		call SPI_Transfer
+ 267               	.LVL17:
+ 525:bootSAH_5.c   **** 	SPI_PORT  |=   (1<<SPI_CS);
+ 268               		.loc 1 525 0
+ 269 0078 289A      		sbi 0x5,0
+ 526:bootSAH_5.c   **** 	tiny_delay();
+ 270               		.loc 1 526 0
+ 271 007a 0C94 0000 		jmp tiny_delay
+ 272               	.LVL18:
+ 273               		.cfi_endproc
+ 274               	.LFE19:
+ 276               	.global	FLASH_ReadWord
+ 278               	FLASH_ReadWord:
+ 279               	.LFB20:
+ 527:bootSAH_5.c   **** }
+ 528:bootSAH_5.c   **** 
+ 529:bootSAH_5.c   **** uint16_t FLASH_ReadWord(uint32_t faddr)
+ 530:bootSAH_5.c   **** {
+ 280               		.loc 1 530 0
+ 281               		.cfi_startproc
+ 282               	.LVL19:
+ 283 007e 1F93      		push r17
+ 284               	.LCFI0:
+ 285               		.cfi_def_cfa_offset 4
+ 286               		.cfi_offset 17, -3
+ 287 0080 CF93      		push r28
+ 288               	.LCFI1:
+ 289               		.cfi_def_cfa_offset 5
+ 290               		.cfi_offset 28, -4
+ 291 0082 DF93      		push r29
+ 292               	.LCFI2:
+ 293               		.cfi_def_cfa_offset 6
+ 294               		.cfi_offset 29, -5
+ 295               	/* prologue: function */
+ 296               	/* frame size = 0 */
+ 297               	/* stack size = 3 */
+ 298               	.L__stack_usage = 3
+ 299 0084 EB01      		movw r28,r22
+ 300 0086 182F      		mov r17,r24
+ 301               	.LVL20:
+ 531:bootSAH_5.c   **** 	uint16_t temp1=0, temp2=0;
+ 532:bootSAH_5.c   **** 	SPI_PORT  &=  ~(1<<SPI_CS);
+ 302               		.loc 1 532 0
+ 303 0088 2898      		cbi 0x5,0
+ 533:bootSAH_5.c   **** 	SPI_Transfer(0x03);
+ 304               		.loc 1 533 0
+ 305 008a 83E0      		ldi r24,lo8(3)
+ 306 008c 0E94 0000 		call SPI_Transfer
+ 307               	.LVL21:
+ 534:bootSAH_5.c   **** 	SPI_Transfer((faddr >> 16) & 0xff);
+ 308               		.loc 1 534 0
+ 309 0090 812F      		mov r24,r17
+ 310 0092 0E94 0000 		call SPI_Transfer
+ 311               	.LVL22:
+ 535:bootSAH_5.c   **** 	SPI_Transfer((faddr >> 8) & 0xff);
+ 312               		.loc 1 535 0
+ 313 0096 8D2F      		mov r24,r29
+ 314 0098 0E94 0000 		call SPI_Transfer
+ 315               	.LVL23:
+ 536:bootSAH_5.c   **** 	SPI_Transfer(faddr & 0xff);
+ 316               		.loc 1 536 0
+ 317 009c 8C2F      		mov r24,r28
+ 318 009e 0E94 0000 		call SPI_Transfer
+ 319               	.LVL24:
+ 537:bootSAH_5.c   **** 	temp1 = SPI_Transfer(0);
+ 320               		.loc 1 537 0
+ 321 00a2 80E0      		ldi r24,0
+ 322 00a4 0E94 0000 		call SPI_Transfer
+ 323               	.LVL25:
+ 324 00a8 D82F      		mov r29,r24
+ 325               	.LVL26:
+ 538:bootSAH_5.c   **** 	temp2 = SPI_Transfer(0);
+ 326               		.loc 1 538 0
+ 327 00aa 80E0      		ldi r24,0
+ 328               	.LVL27:
+ 329 00ac 0E94 0000 		call SPI_Transfer
+ 330               	.LVL28:
+ 331 00b0 C82F      		mov r28,r24
+ 332               	.LVL29:
+ 539:bootSAH_5.c   **** 	SPI_PORT  |=   (1<<SPI_CS);
+ 333               		.loc 1 539 0
+ 334 00b2 289A      		sbi 0x5,0
+ 540:bootSAH_5.c   **** 	tiny_delay();
+ 335               		.loc 1 540 0
+ 336 00b4 0E94 0000 		call tiny_delay
+ 337               	.LVL30:
+ 541:bootSAH_5.c   **** 							//sendchar(temp1 & 0xff);
+ 542:bootSAH_5.c   **** 							//sendchar(temp2 & 0xff);
+ 543:bootSAH_5.c   **** 							//sendchar(0x0d);
+ 544:bootSAH_5.c   **** 							//sendchar(0x0a);					
+ 545:bootSAH_5.c   **** 	return ((temp1 << 8) | (temp2 & 0x00ff));
+ 338               		.loc 1 545 0
+ 339 00b8 8C2F      		mov r24,r28
+ 340 00ba 90E0      		ldi r25,0
+ 546:bootSAH_5.c   **** 
+ 547:bootSAH_5.c   **** }
+ 341               		.loc 1 547 0
+ 342 00bc 9D2B      		or r25,r29
+ 343               	/* epilogue start */
+ 344 00be DF91      		pop r29
+ 345               	.LVL31:
+ 346 00c0 CF91      		pop r28
+ 347               	.LVL32:
+ 348 00c2 1F91      		pop r17
+ 349 00c4 0895      		ret
+ 350               		.cfi_endproc
+ 351               	.LFE20:
+ 353               	.global	FLASH_EraseSector
+ 355               	FLASH_EraseSector:
+ 356               	.LFB21:
+ 548:bootSAH_5.c   **** 
+ 549:bootSAH_5.c   **** void FLASH_EraseSector(uint32_t faddr)
+ 550:bootSAH_5.c   **** {
+ 357               		.loc 1 550 0
+ 358               		.cfi_startproc
+ 359               	.LVL33:
+ 360 00c6 1F93      		push r17
+ 361               	.LCFI3:
+ 362               		.cfi_def_cfa_offset 4
+ 363               		.cfi_offset 17, -3
+ 364 00c8 CF93      		push r28
+ 365               	.LCFI4:
+ 366               		.cfi_def_cfa_offset 5
+ 367               		.cfi_offset 28, -4
+ 368 00ca DF93      		push r29
+ 369               	.LCFI5:
+ 370               		.cfi_def_cfa_offset 6
+ 371               		.cfi_offset 29, -5
+ 372               	/* prologue: function */
+ 373               	/* frame size = 0 */
+ 374               	/* stack size = 3 */
+ 375               	.L__stack_usage = 3
+ 376 00cc EB01      		movw r28,r22
+ 377 00ce 182F      		mov r17,r24
+ 551:bootSAH_5.c   **** 	FLASH_UntilReady();
+ 378               		.loc 1 551 0
+ 379 00d0 0E94 0000 		call FLASH_UntilReady
+ 380               	.LVL34:
+ 552:bootSAH_5.c   **** 	FLASH_WriteEnable();
+ 381               		.loc 1 552 0
+ 382 00d4 0E94 0000 		call FLASH_WriteEnable
+ 383               	.LVL35:
+ 553:bootSAH_5.c   **** 	SPI_PORT  &=  ~(1<<SPI_CS);
+ 384               		.loc 1 553 0
+ 385 00d8 2898      		cbi 0x5,0
+ 554:bootSAH_5.c   **** 	SPI_Transfer(0x20);
+ 386               		.loc 1 554 0
+ 387 00da 80E2      		ldi r24,lo8(32)
+ 388 00dc 0E94 0000 		call SPI_Transfer
+ 389               	.LVL36:
+ 555:bootSAH_5.c   **** 	SPI_Transfer((faddr >> 16) & 0xff);
+ 390               		.loc 1 555 0
+ 391 00e0 812F      		mov r24,r17
+ 392 00e2 0E94 0000 		call SPI_Transfer
+ 393               	.LVL37:
+ 556:bootSAH_5.c   **** 	SPI_Transfer((faddr >> 8) & 0xff);
+ 394               		.loc 1 556 0
+ 395 00e6 8D2F      		mov r24,r29
+ 396 00e8 0E94 0000 		call SPI_Transfer
+ 397               	.LVL38:
+ 557:bootSAH_5.c   **** 	SPI_Transfer(faddr & 0xff);
+ 398               		.loc 1 557 0
+ 399 00ec 8C2F      		mov r24,r28
+ 400 00ee 0E94 0000 		call SPI_Transfer
+ 401               	.LVL39:
+ 558:bootSAH_5.c   **** 	SPI_PORT  |=   (1<<SPI_CS);
+ 402               		.loc 1 558 0
+ 403 00f2 289A      		sbi 0x5,0
+ 559:bootSAH_5.c   **** 	tiny_delay();
+ 404               		.loc 1 559 0
+ 405 00f4 0E94 0000 		call tiny_delay
+ 406               	.LVL40:
+ 407               	/* epilogue start */
+ 560:bootSAH_5.c   **** 	FLASH_UntilReady();
+ 561:bootSAH_5.c   **** }
+ 408               		.loc 1 561 0
+ 409 00f8 DF91      		pop r29
+ 410 00fa CF91      		pop r28
+ 411 00fc 1F91      		pop r17
+ 560:bootSAH_5.c   **** 	FLASH_UntilReady();
+ 412               		.loc 1 560 0
+ 413 00fe 0C94 0000 		jmp FLASH_UntilReady
+ 414               	.LVL41:
+ 415               		.cfi_endproc
+ 416               	.LFE21:
+ 418               		.section	.text.startup,"ax",@progbits
+ 419               	.global	main
+ 421               	main:
+ 422               	.LFB12:
+ 173:bootSAH_5.c   **** 	uint32_t fMemStatus = 0;
+ 423               		.loc 1 173 0
+ 424               		.cfi_startproc
+ 425 0000 CF93      		push r28
+ 426               	.LCFI6:
+ 427               		.cfi_def_cfa_offset 4
+ 428               		.cfi_offset 28, -3
+ 429 0002 DF93      		push r29
+ 430               	.LCFI7:
+ 431               		.cfi_def_cfa_offset 5
+ 432               		.cfi_offset 29, -4
+ 433 0004 CDB7      		in r28,__SP_L__
+ 434 0006 DEB7      		in r29,__SP_H__
+ 435               	.LCFI8:
+ 436               		.cfi_def_cfa_register 28
+ 437 0008 C650      		subi r28,6
+ 438 000a D140      		sbci r29,1
+ 439               	.LCFI9:
+ 440               		.cfi_def_cfa_offset 267
+ 441 000c 0FB6      		in __tmp_reg__,__SREG__
+ 442 000e F894      		cli
+ 443 0010 DEBF      		out __SP_H__,r29
+ 444 0012 0FBE      		out __SREG__,__tmp_reg__
+ 445 0014 CDBF      		out __SP_L__,r28
+ 446               	/* prologue: function */
+ 447               	/* frame size = 262 */
+ 448               	/* stack size = 264 */
+ 449               	.L__stack_usage = 264
+ 450               	.LVL42:
+ 210:bootSAH_5.c   **** 	asm volatile ( "ldi	16, %0" :: "i" (RAMEND >> 8) );
+ 451               		.loc 1 210 0
+ 452               	/* #APP */
+ 453               	 ;  210 "bootSAH_5.c" 1
+ 454               		.set __stack, 8703
+ 455               	 ;  0 "" 2
+ 211:bootSAH_5.c   **** 	asm volatile ( "out %0,16" :: "i" (AVR_STACK_POINTER_HI_ADDR) );
+ 456               		.loc 1 211 0
+ 457               	 ;  211 "bootSAH_5.c" 1
+ 458 0016 01E2      		ldi	16, 33
+ 459               	 ;  0 "" 2
+ 212:bootSAH_5.c   **** 	asm volatile ( "ldi	16, %0" :: "i" (RAMEND & 0x0ff) );
+ 460               		.loc 1 212 0
+ 461               	 ;  212 "bootSAH_5.c" 1
+ 462 0018 0EBF      		out 62,16
+ 463               	 ;  0 "" 2
+ 213:bootSAH_5.c   **** 	asm volatile ( "out %0,16" :: "i" (AVR_STACK_POINTER_LO_ADDR) );
+ 464               		.loc 1 213 0
+ 465               	 ;  213 "bootSAH_5.c" 1
+ 466 001a 0FEF      		ldi	16, 255
+ 467               	 ;  0 "" 2
+ 214:bootSAH_5.c   **** 	
+ 468               		.loc 1 214 0
+ 469               	 ;  214 "bootSAH_5.c" 1
+ 470 001c 0DBF      		out 61,16
+ 471               	 ;  0 "" 2
+ 220:bootSAH_5.c   **** 
+ 472               		.loc 1 220 0
+ 473               	/* #NOAPP */
+ 474 001e 94B7      		in r25,0x34
+ 475               	.LVL43:
+ 222:bootSAH_5.c   **** 	__asm__ __volatile__ ("wdr");
+ 476               		.loc 1 222 0
+ 477               	/* #APP */
+ 478               	 ;  222 "bootSAH_5.c" 1
+ 479 0020 F894      		cli
+ 480               	 ;  0 "" 2
+ 223:bootSAH_5.c   **** 	//MCUSR	=	0;
+ 481               		.loc 1 223 0
+ 482               	 ;  223 "bootSAH_5.c" 1
+ 483 0022 A895      		wdr
+ 484               	 ;  0 "" 2
+ 225:bootSAH_5.c   **** 	WDTCSR	=	0;
+ 485               		.loc 1 225 0
+ 486               	/* #NOAPP */
+ 487 0024 8091 6000 		lds r24,96
+ 488 0028 8861      		ori r24,lo8(24)
+ 489 002a 8093 6000 		sts 96,r24
+ 226:bootSAH_5.c   **** 	__asm__ __volatile__ ("sei");
+ 490               		.loc 1 226 0
+ 491 002e 1092 6000 		sts 96,__zero_reg__
+ 227:bootSAH_5.c   **** 	// check if WDT generated the reset, if so, go straight to app
+ 492               		.loc 1 227 0
+ 493               	/* #APP */
+ 494               	 ;  227 "bootSAH_5.c" 1
+ 495 0032 7894      		sei
+ 496               	 ;  0 "" 2
+ 229:bootSAH_5.c   **** 	{
+ 497               		.loc 1 229 0
+ 498               	/* #NOAPP */
+ 499 0034 93FF      		sbrs r25,3
+ 500 0036 00C0      		rjmp .L21
+ 231:bootSAH_5.c   **** 	}
+ 501               		.loc 1 231 0
+ 502 0038 E091 0000 		lds r30,app_start
+ 503 003c F091 0000 		lds r31,app_start+1
+ 504 0040 1995      		eicall
+ 505               	.LVL44:
+ 506               	.L21:
+ 250:bootSAH_5.c   **** 				(1<<SPI_MOSI)|
+ 507               		.loc 1 250 0
+ 508 0042 87E0      		ldi r24,lo8(7)
+ 509 0044 84B9      		out 0x4,r24
+ 256:bootSAH_5.c   **** 				(0<<SPIE)|              // SPI Interupt Enable
+ 510               		.loc 1 256 0
+ 511 0046 81E5      		ldi r24,lo8(81)
+ 512 0048 8CBD      		out 0x2c,r24
+ 265:bootSAH_5.c   **** 	
+ 513               		.loc 1 265 0
+ 514 004a 289A      		sbi 0x5,0
+ 267:bootSAH_5.c   **** 	
+ 515               		.loc 1 267 0
+ 516               	/* #APP */
+ 517               	 ;  267 "bootSAH_5.c" 1
+ 518 004c 0000      		nop
+ 519               	 ;  0 "" 2
+ 520               	.LVL45:
+ 298:bootSAH_5.c   **** 	FLASH_ResetEnable();
+ 521               		.loc 1 298 0
+ 522               	/* #NOAPP */
+ 523 004e 0E94 0000 		call FLASH_UntilReady
+ 524               	.LVL46:
+ 299:bootSAH_5.c   **** 	FLASH_Reset();
+ 525               		.loc 1 299 0
+ 526 0052 0E94 0000 		call FLASH_ResetEnable
+ 527               	.LVL47:
+ 300:bootSAH_5.c   **** 	
+ 528               		.loc 1 300 0
+ 529 0056 0E94 0000 		call FLASH_Reset
+ 530               	.LVL48:
+ 302:bootSAH_5.c   **** 	SPI_Transfer(0x9F);
+ 531               		.loc 1 302 0
+ 532 005a 2898      		cbi 0x5,0
+ 303:bootSAH_5.c   **** 	fMemStatus = (uint32_t)SPI_Transfer(0) << 16;
+ 533               		.loc 1 303 0
+ 534 005c 8FE9      		ldi r24,lo8(-97)
+ 535 005e 0E94 0000 		call SPI_Transfer
+ 536               	.LVL49:
+ 304:bootSAH_5.c   **** 	fMemStatus |= (uint32_t)SPI_Transfer(0) << 8;
+ 537               		.loc 1 304 0
+ 538 0062 80E0      		ldi r24,0
+ 539 0064 0E94 0000 		call SPI_Transfer
+ 540               	.LVL50:
+ 541 0068 C82E      		mov r12,r24
+ 542 006a D12C      		mov r13,__zero_reg__
+ 543 006c E12C      		mov r14,__zero_reg__
+ 544 006e F12C      		mov r15,__zero_reg__
+ 545 0070 7601      		movw r14,r12
+ 546 0072 DD24      		clr r13
+ 547 0074 CC24      		clr r12
+ 548               	.LVL51:
+ 305:bootSAH_5.c   **** 	fMemStatus |= (uint32_t)SPI_Transfer(0);
+ 549               		.loc 1 305 0
+ 550 0076 80E0      		ldi r24,0
+ 551 0078 0E94 0000 		call SPI_Transfer
+ 552               	.LVL52:
+ 553 007c D82A      		or r13,r24
+ 306:bootSAH_5.c   **** 	SPI_PORT |=  (1<<SPI_CS);
+ 554               		.loc 1 306 0
+ 555 007e 80E0      		ldi r24,0
+ 556 0080 0E94 0000 		call SPI_Transfer
+ 557               	.LVL53:
+ 307:bootSAH_5.c   **** 
+ 558               		.loc 1 307 0
+ 559 0084 289A      		sbi 0x5,0
+ 309:bootSAH_5.c   **** 	{
+ 560               		.loc 1 309 0
+ 561 0086 C82A      		or r12,r24
+ 562               	.LVL54:
+ 563 0088 27E1      		ldi r18,23
+ 564 008a C216      		cp r12,r18
+ 565 008c 20E4      		ldi r18,64
+ 566 008e D206      		cpc r13,r18
+ 567 0090 2FEE      		ldi r18,-17
+ 568 0092 E206      		cpc r14,r18
+ 569 0094 F104      		cpc r15,__zero_reg__
+ 570 0096 01F0      		breq .+2
+ 571 0098 00C0      		rjmp .L23
+ 311:bootSAH_5.c   **** 		SPI_Transfer(0x03);
+ 572               		.loc 1 311 0
+ 573 009a 2898      		cbi 0x5,0
+ 312:bootSAH_5.c   **** 		SPI_Transfer((fBStatAddr >> 16) & 0xff);
+ 574               		.loc 1 312 0
+ 575 009c 83E0      		ldi r24,lo8(3)
+ 576 009e 0E94 0000 		call SPI_Transfer
+ 577               	.LVL55:
+ 313:bootSAH_5.c   **** 		SPI_Transfer((fBStatAddr >> 8) & 0xff);
+ 578               		.loc 1 313 0
+ 579 00a2 80E0      		ldi r24,0
+ 580 00a4 0E94 0000 		call SPI_Transfer
+ 581               	.LVL56:
+ 314:bootSAH_5.c   **** 		SPI_Transfer(fBStatAddr & 0xff);
+ 582               		.loc 1 314 0
+ 583 00a8 80E1      		ldi r24,lo8(16)
+ 584 00aa 0E94 0000 		call SPI_Transfer
+ 585               	.LVL57:
+ 315:bootSAH_5.c   **** 		fBootStat = (uint16_t)SPI_Transfer(0) << 8;
+ 586               		.loc 1 315 0
+ 587 00ae 80E0      		ldi r24,0
+ 588 00b0 0E94 0000 		call SPI_Transfer
+ 589               	.LVL58:
+ 316:bootSAH_5.c   **** 		fBootStat |= (uint16_t)SPI_Transfer(0);
+ 590               		.loc 1 316 0
+ 591 00b4 80E0      		ldi r24,0
+ 592 00b6 0E94 0000 		call SPI_Transfer
+ 593               	.LVL59:
+ 594 00ba 082F      		mov r16,r24
+ 595 00bc 10E0      		ldi r17,0
+ 596 00be 102F      		mov r17,r16
+ 597 00c0 0027      		clr r16
+ 598               	.LVL60:
+ 317:bootSAH_5.c   **** 		SPI_PORT  |=   (1<<SPI_CS);
+ 599               		.loc 1 317 0
+ 600 00c2 80E0      		ldi r24,0
+ 601 00c4 0E94 0000 		call SPI_Transfer
+ 602               	.LVL61:
+ 603 00c8 082B      		or r16,r24
+ 604               	.LVL62:
+ 318:bootSAH_5.c   **** 		tiny_delay();
+ 605               		.loc 1 318 0
+ 606 00ca 289A      		sbi 0x5,0
+ 319:bootSAH_5.c   **** 
+ 607               		.loc 1 319 0
+ 608 00cc 0E94 0000 		call tiny_delay
+ 609               	.LVL63:
+ 322:bootSAH_5.c   **** 		{
+ 610               		.loc 1 322 0
+ 611 00d0 0332      		cpi r16,35
+ 612 00d2 1342      		sbci r17,35
+ 613 00d4 01F0      		breq .+2
+ 614 00d6 00C0      		rjmp .L23
+ 325:bootSAH_5.c   **** 			SPI_Transfer(0x03);
+ 615               		.loc 1 325 0
+ 616 00d8 2898      		cbi 0x5,0
+ 326:bootSAH_5.c   **** 			SPI_Transfer((fDLenAddr >> 16) & 0xff);
+ 617               		.loc 1 326 0
+ 618 00da 83E0      		ldi r24,lo8(3)
+ 619 00dc 0E94 0000 		call SPI_Transfer
+ 620               	.LVL64:
+ 327:bootSAH_5.c   **** 			SPI_Transfer((fDLenAddr >> 8) & 0xff);
+ 621               		.loc 1 327 0
+ 622 00e0 80E0      		ldi r24,0
+ 623 00e2 0E94 0000 		call SPI_Transfer
+ 624               	.LVL65:
+ 328:bootSAH_5.c   **** 			SPI_Transfer(fDLenAddr & 0xff);
+ 625               		.loc 1 328 0
+ 626 00e6 80E1      		ldi r24,lo8(16)
+ 627 00e8 0E94 0000 		call SPI_Transfer
+ 628               	.LVL66:
+ 329:bootSAH_5.c   **** 			fDataLen = (uint16_t)SPI_Transfer(0) << 8;
+ 629               		.loc 1 329 0
+ 630 00ec 82E0      		ldi r24,lo8(2)
+ 631 00ee 0E94 0000 		call SPI_Transfer
+ 632               	.LVL67:
+ 330:bootSAH_5.c   **** 			fDataLen |= (uint16_t)SPI_Transfer(0);
+ 633               		.loc 1 330 0
+ 634 00f2 80E0      		ldi r24,0
+ 635 00f4 0E94 0000 		call SPI_Transfer
+ 636               	.LVL68:
+ 637 00f8 082F      		mov r16,r24
+ 638               	.LVL69:
+ 639 00fa 10E0      		ldi r17,0
+ 640 00fc 102F      		mov r17,r16
+ 641 00fe 0027      		clr r16
+ 642               	.LVL70:
+ 331:bootSAH_5.c   **** 			SPI_PORT  |=   (1<<SPI_CS);
+ 643               		.loc 1 331 0
+ 644 0100 80E0      		ldi r24,0
+ 645 0102 0E94 0000 		call SPI_Transfer
+ 646               	.LVL71:
+ 647 0106 F801      		movw r30,r16
+ 648 0108 E82B      		or r30,r24
+ 649 010a CD5F      		subi r28,lo8(-259)
+ 650 010c DE4F      		sbci r29,hi8(-259)
+ 651 010e F983      		std Y+1,r31
+ 652 0110 E883      		st Y,r30
+ 653 0112 C350      		subi r28,lo8(259)
+ 654 0114 D140      		sbci r29,hi8(259)
+ 655               	.LVL72:
+ 332:bootSAH_5.c   **** 			tiny_delay();
+ 656               		.loc 1 332 0
+ 657 0116 289A      		sbi 0x5,0
+ 333:bootSAH_5.c   **** 
+ 658               		.loc 1 333 0
+ 659 0118 0E94 0000 		call tiny_delay
+ 660               	.LVL73:
+ 293:bootSAH_5.c   **** 	fPageAddr  = 0;
+ 661               		.loc 1 293 0
+ 662 011c 812C      		mov r8,__zero_reg__
+ 663 011e 51E1      		ldi r21,lo8(17)
+ 664 0120 952E      		mov r9,r21
+ 665 0122 A12C      		mov r10,__zero_reg__
+ 666 0124 B12C      		mov r11,__zero_reg__
+ 292:bootSAH_5.c   **** 	fCsumAddr  = 4352;
+ 667               		.loc 1 292 0
+ 668 0126 C12C      		mov r12,__zero_reg__
+ 669 0128 60E2      		ldi r22,lo8(32)
+ 670 012a D62E      		mov r13,r22
+ 671 012c E12C      		mov r14,__zero_reg__
+ 672 012e F12C      		mov r15,__zero_reg__
+ 673 0130 9E01      		movw r18,r28
+ 674 0132 2F5F      		subi r18,-1
+ 675 0134 3E4F      		sbci r19,-2
+ 676 0136 CF5F      		subi r28,lo8(-257)
+ 677 0138 DE4F      		sbci r29,hi8(-257)
+ 678 013a 3983      		std Y+1,r19
+ 679 013c 2883      		st Y,r18
+ 680 013e C150      		subi r28,lo8(257)
+ 681 0140 D140      		sbci r29,hi8(257)
+ 682               	.LVL74:
+ 683               	.L38:
+ 684 0142 2601      		movw r4,r12
+ 685 0144 3701      		movw r6,r14
+ 686 0146 30E2      		ldi r19,32
+ 687 0148 531A      		sub r5,r19
+ 688 014a 6108      		sbc r6,__zero_reg__
+ 689 014c 7108      		sbc r7,__zero_reg__
+ 690               	.LVL75:
+ 342:bootSAH_5.c   **** 				SPI_Transfer(0x03);
+ 691               		.loc 1 342 0
+ 692 014e 2898      		cbi 0x5,0
+ 343:bootSAH_5.c   **** 				SPI_Transfer((fDataAddr >> 16) & 0xff);
+ 693               		.loc 1 343 0
+ 694 0150 83E0      		ldi r24,lo8(3)
+ 695 0152 0E94 0000 		call SPI_Transfer
+ 696               	.LVL76:
+ 344:bootSAH_5.c   **** 				SPI_Transfer((fDataAddr >> 8) & 0xff);
+ 697               		.loc 1 344 0
+ 698 0156 8E2D      		mov r24,r14
+ 699 0158 0E94 0000 		call SPI_Transfer
+ 700               	.LVL77:
+ 345:bootSAH_5.c   **** 				SPI_Transfer(fDataAddr & 0xff);			
+ 701               		.loc 1 345 0
+ 702 015c 8D2D      		mov r24,r13
+ 703 015e 0E94 0000 		call SPI_Transfer
+ 704               	.LVL78:
+ 346:bootSAH_5.c   **** 				do 
+ 705               		.loc 1 346 0
+ 706 0162 80E0      		ldi r24,0
+ 707 0164 0E94 0000 		call SPI_Transfer
+ 708               	.LVL79:
+ 709 0168 CE01      		movw r24,r28
+ 710 016a 0196      		adiw r24,1
+ 711 016c 1C01      		movw r2,r24
+ 712 016e 8C01      		movw r16,r24
+ 341:bootSAH_5.c   **** 				SPI_PORT  &=  ~(1<<SPI_CS);
+ 713               		.loc 1 341 0
+ 714 0170 CB5F      		subi r28,lo8(-261)
+ 715 0172 DE4F      		sbci r29,hi8(-261)
+ 716 0174 1982      		std Y+1,__zero_reg__
+ 717 0176 1882      		st Y,__zero_reg__
+ 718 0178 C550      		subi r28,lo8(261)
+ 719 017a D140      		sbci r29,hi8(261)
+ 720               	.LVL80:
+ 721               	.L25:
+ 349:bootSAH_5.c   **** 					flashBuff[fExMemInc++] = fRdData;
+ 722               		.loc 1 349 0 discriminator 1
+ 723 017c 80E0      		ldi r24,0
+ 724 017e 0E94 0000 		call SPI_Transfer
+ 725               	.LVL81:
+ 350:bootSAH_5.c   **** 					fChSumCal += fRdData;				
+ 726               		.loc 1 350 0 discriminator 1
+ 727 0182 F801      		movw r30,r16
+ 728 0184 8193      		st Z+,r24
+ 729 0186 8F01      		movw r16,r30
+ 351:bootSAH_5.c   **** 					fExMemSize--;
+ 730               		.loc 1 351 0 discriminator 1
+ 731 0188 CB5F      		subi r28,lo8(-261)
+ 732 018a DE4F      		sbci r29,hi8(-261)
+ 733 018c 2881      		ld r18,Y
+ 734 018e 3981      		ldd r19,Y+1
+ 735 0190 C550      		subi r28,lo8(261)
+ 736 0192 D140      		sbci r29,hi8(261)
+ 737 0194 280F      		add r18,r24
+ 738 0196 311D      		adc r19,__zero_reg__
+ 739 0198 CB5F      		subi r28,lo8(-261)
+ 740 019a DE4F      		sbci r29,hi8(-261)
+ 741 019c 3983      		std Y+1,r19
+ 742 019e 2883      		st Y,r18
+ 743 01a0 C550      		subi r28,lo8(261)
+ 744 01a2 D140      		sbci r29,hi8(261)
+ 745               	.LVL82:
+ 353:bootSAH_5.c   **** 				SPI_PORT  |=   (1<<SPI_CS);
+ 746               		.loc 1 353 0 discriminator 1
+ 747 01a4 CF5F      		subi r28,lo8(-257)
+ 748 01a6 DE4F      		sbci r29,hi8(-257)
+ 749 01a8 8881      		ld r24,Y
+ 750 01aa 9981      		ldd r25,Y+1
+ 751 01ac C150      		subi r28,lo8(257)
+ 752 01ae D140      		sbci r29,hi8(257)
+ 753               	.LVL83:
+ 754 01b0 E817      		cp r30,r24
+ 755 01b2 F907      		cpc r31,r25
+ 756 01b4 01F4      		brne .L25
+ 354:bootSAH_5.c   **** 				tiny_delay();
+ 757               		.loc 1 354 0
+ 758 01b6 289A      		sbi 0x5,0
+ 355:bootSAH_5.c   **** 
+ 759               		.loc 1 355 0
+ 760 01b8 0E94 0000 		call tiny_delay
+ 761               	.LVL84:
+ 358:bootSAH_5.c   **** 				SPI_Transfer(0x03);
+ 762               		.loc 1 358 0
+ 763 01bc 2898      		cbi 0x5,0
+ 359:bootSAH_5.c   **** 				SPI_Transfer((fCsumAddr >> 16) & 0xff);
+ 764               		.loc 1 359 0
+ 765 01be 83E0      		ldi r24,lo8(3)
+ 766 01c0 0E94 0000 		call SPI_Transfer
+ 767               	.LVL85:
+ 360:bootSAH_5.c   **** 				SPI_Transfer((fCsumAddr >> 8) & 0xff);
+ 768               		.loc 1 360 0
+ 769 01c4 80E0      		ldi r24,0
+ 770 01c6 0E94 0000 		call SPI_Transfer
+ 771               	.LVL86:
+ 361:bootSAH_5.c   **** 				SPI_Transfer(fCsumAddr & 0xff);				
+ 772               		.loc 1 361 0
+ 773 01ca 892D      		mov r24,r9
+ 774 01cc 0E94 0000 		call SPI_Transfer
+ 775               	.LVL87:
+ 362:bootSAH_5.c   **** 				fChSumRev = (uint16_t)SPI_Transfer(0) << 8;
+ 776               		.loc 1 362 0
+ 777 01d0 882D      		mov r24,r8
+ 778 01d2 0E94 0000 		call SPI_Transfer
+ 779               	.LVL88:
+ 363:bootSAH_5.c   **** 				fChSumRev |= (uint16_t)SPI_Transfer(0);			
+ 780               		.loc 1 363 0
+ 781 01d6 80E0      		ldi r24,0
+ 782 01d8 0E94 0000 		call SPI_Transfer
+ 783               	.LVL89:
+ 784 01dc 082F      		mov r16,r24
+ 785 01de 10E0      		ldi r17,0
+ 786 01e0 102F      		mov r17,r16
+ 787 01e2 0027      		clr r16
+ 788               	.LVL90:
+ 364:bootSAH_5.c   **** 				SPI_PORT  |=   (1<<SPI_CS);
+ 789               		.loc 1 364 0
+ 790 01e4 80E0      		ldi r24,0
+ 791 01e6 0E94 0000 		call SPI_Transfer
+ 792               	.LVL91:
+ 793 01ea 082B      		or r16,r24
+ 794               	.LVL92:
+ 365:bootSAH_5.c   **** 				tiny_delay();
+ 795               		.loc 1 365 0
+ 796 01ec 289A      		sbi 0x5,0
+ 366:bootSAH_5.c   **** 		
+ 797               		.loc 1 366 0
+ 798 01ee 0E94 0000 		call tiny_delay
+ 799               	.LVL93:
+ 368:bootSAH_5.c   **** 				{
+ 800               		.loc 1 368 0
+ 801 01f2 CB5F      		subi r28,lo8(-261)
+ 802 01f4 DE4F      		sbci r29,hi8(-261)
+ 803 01f6 E881      		ld r30,Y
+ 804 01f8 F981      		ldd r31,Y+1
+ 805 01fa C550      		subi r28,lo8(261)
+ 806 01fc D140      		sbci r29,hi8(261)
+ 807 01fe E017      		cp r30,r16
+ 808 0200 F107      		cpc r31,r17
+ 809 0202 01F0      		breq .+2
+ 810 0204 00C0      		rjmp .L26
+ 811               	.LVL94:
+ 378:bootSAH_5.c   **** 				{
+ 812               		.loc 1 378 0
+ 813 0206 C114      		cp r12,__zero_reg__
+ 814 0208 F0EE      		ldi r31,-32
+ 815 020a DF06      		cpc r13,r31
+ 816 020c F3E0      		ldi r31,3
+ 817 020e EF06      		cpc r14,r31
+ 818 0210 F104      		cpc r15,__zero_reg__
+ 819 0212 01F4      		brne .+2
+ 820 0214 00C0      		rjmp .L26
+ 821               	.L47:
+ 383:bootSAH_5.c   **** 				boot_spm_busy_wait();			
+ 822               		.loc 1 383 0 discriminator 1
+ 823 0216 07B6      		in __tmp_reg__,0x37
+ 824 0218 00FC      		sbrc __tmp_reg__,0
+ 825 021a 00C0      		rjmp .L47
+ 826               	.L28:
+ 383:bootSAH_5.c   **** 				boot_spm_busy_wait();			
+ 827               		.loc 1 383 0 is_stmt 0 discriminator 3
+ 828 021c F999      		sbic 0x1f,1
+ 829 021e 00C0      		rjmp .L28
+ 383:bootSAH_5.c   **** 				boot_spm_busy_wait();			
+ 830               		.loc 1 383 0 discriminator 4
+ 831 0220 83E0      		ldi r24,lo8(3)
+ 832               	/* #APP */
+ 833               	 ;  383 "bootSAH_5.c" 1
+ 834 0222 F201      		movw r30, r4
+ 835 0224 6092 5B00 		sts  91, r6
+ 836 0228 8093 5700 		sts 87, r24
+ 837 022c E895      		spm
+ 838               		
+ 839               	 ;  0 "" 2
+ 840               	/* #NOAPP */
+ 841               	.L29:
+ 384:bootSAH_5.c   **** 					
+ 842               		.loc 1 384 0 is_stmt 1 discriminator 1
+ 843 022e 07B6      		in __tmp_reg__,0x37
+ 844 0230 00FC      		sbrc __tmp_reg__,0
+ 845 0232 00C0      		rjmp .L29
+ 846 0234 B301      		movw r22,r6
+ 847 0236 A201      		movw r20,r4
+ 848               	.LVL95:
+ 849               	.L32:
+ 393:bootSAH_5.c   **** 						
+ 850               		.loc 1 393 0
+ 851 0238 F101      		movw r30,r2
+ 852 023a 8181      		ldd r24,Z+1
+ 853 023c 90E0      		ldi r25,0
+ 854 023e 982F      		mov r25,r24
+ 855 0240 8827      		clr r24
+ 856 0242 2081      		ld r18,Z
+ 857 0244 822B      		or r24,r18
+ 858               	.LVL96:
+ 859               	.L30:
+ 395:bootSAH_5.c   **** 					
+ 860               		.loc 1 395 0 discriminator 1
+ 861 0246 07B6      		in __tmp_reg__,0x37
+ 862 0248 00FC      		sbrc __tmp_reg__,0
+ 863 024a 00C0      		rjmp .L30
+ 864               	.L31:
+ 395:bootSAH_5.c   **** 					
+ 865               		.loc 1 395 0 is_stmt 0 discriminator 3
+ 866 024c F999      		sbic 0x1f,1
+ 867 024e 00C0      		rjmp .L31
+ 395:bootSAH_5.c   **** 					
+ 868               		.loc 1 395 0 discriminator 4
+ 869 0250 21E0      		ldi r18,lo8(1)
+ 870               	/* #APP */
+ 871               	 ;  395 "bootSAH_5.c" 1
+ 872 0252 0C01      		movw  r0, r24
+ 873 0254 FA01      		movw r30, r20
+ 874 0256 6093 5B00 		sts 91, r22
+ 875 025a 2093 5700 		sts 87, r18
+ 876 025e E895      		spm
+ 877 0260 1124      		clr  r1
+ 878               		
+ 879               	 ;  0 "" 2
+ 398:bootSAH_5.c   **** 					asm volatile ("nop");	
+ 880               		.loc 1 398 0 is_stmt 1 discriminator 4
+ 881               	/* #NOAPP */
+ 882 0262 4E5F      		subi r20,-2
+ 883 0264 5F4F      		sbci r21,-1
+ 884 0266 6F4F      		sbci r22,-1
+ 885 0268 7F4F      		sbci r23,-1
+ 886               	.LVL97:
+ 399:bootSAH_5.c   **** 					fInMemSize = fInMemSize - 2;
+ 887               		.loc 1 399 0 discriminator 4
+ 888               	/* #APP */
+ 889               	 ;  399 "bootSAH_5.c" 1
+ 890 026a 0000      		nop
+ 891               	 ;  0 "" 2
+ 892               	/* #NOAPP */
+ 893 026c 32E0      		ldi r19,2
+ 894 026e 230E      		add r2,r19
+ 895 0270 311C      		adc r3,__zero_reg__
+ 896               	.LVL98:
+ 401:bootSAH_5.c   **** 					
+ 897               		.loc 1 401 0 discriminator 4
+ 898 0272 CF5F      		subi r28,lo8(-257)
+ 899 0274 DE4F      		sbci r29,hi8(-257)
+ 900 0276 8881      		ld r24,Y
+ 901 0278 9981      		ldd r25,Y+1
+ 902 027a C150      		subi r28,lo8(257)
+ 903 027c D140      		sbci r29,hi8(257)
+ 904               	.LVL99:
+ 905 027e 8215      		cp r24,r2
+ 906 0280 9305      		cpc r25,r3
+ 907 0282 01F4      		brne .L32
+ 908               	.L46:
+ 403:bootSAH_5.c   **** 				boot_spm_busy_wait();
+ 909               		.loc 1 403 0 discriminator 1
+ 910 0284 07B6      		in __tmp_reg__,0x37
+ 911 0286 00FC      		sbrc __tmp_reg__,0
+ 912 0288 00C0      		rjmp .L46
+ 913               	.L34:
+ 403:bootSAH_5.c   **** 				boot_spm_busy_wait();
+ 914               		.loc 1 403 0 is_stmt 0 discriminator 3
+ 915 028a F999      		sbic 0x1f,1
+ 916 028c 00C0      		rjmp .L34
+ 403:bootSAH_5.c   **** 				boot_spm_busy_wait();
+ 917               		.loc 1 403 0 discriminator 4
+ 918 028e 95E0      		ldi r25,lo8(5)
+ 919               	/* #APP */
+ 920               	 ;  403 "bootSAH_5.c" 1
+ 921 0290 F201      		movw r30, r4
+ 922 0292 6092 5B00 		sts 91, r6
+ 923 0296 9093 5700 		sts 87, r25
+ 924 029a E895      		spm
+ 925               		
+ 926               	 ;  0 "" 2
+ 927               	/* #NOAPP */
+ 928               	.L35:
+ 404:bootSAH_5.c   **** 				boot_rww_enable_safe();
+ 929               		.loc 1 404 0 is_stmt 1 discriminator 1
+ 930 029c 07B6      		in __tmp_reg__,0x37
+ 931 029e 00FC      		sbrc __tmp_reg__,0
+ 932 02a0 00C0      		rjmp .L35
+ 933               	.L36:
+ 405:bootSAH_5.c   **** 					
+ 934               		.loc 1 405 0 discriminator 1
+ 935 02a2 07B6      		in __tmp_reg__,0x37
+ 936 02a4 00FC      		sbrc __tmp_reg__,0
+ 937 02a6 00C0      		rjmp .L36
+ 938               	.L37:
+ 405:bootSAH_5.c   **** 					
+ 939               		.loc 1 405 0 is_stmt 0 discriminator 3
+ 940 02a8 F999      		sbic 0x1f,1
+ 941 02aa 00C0      		rjmp .L37
+ 405:bootSAH_5.c   **** 					
+ 942               		.loc 1 405 0 discriminator 4
+ 943 02ac E1E1      		ldi r30,lo8(17)
+ 944               	/* #APP */
+ 945               	 ;  405 "bootSAH_5.c" 1
+ 946 02ae E093 5700 		sts 87, r30
+ 947 02b2 E895      		spm
+ 948               		
+ 949               	 ;  0 "" 2
+ 950               	.LVL100:
+ 408:bootSAH_5.c   **** 				fCsumAddr += 2;
+ 951               		.loc 1 408 0 is_stmt 1 discriminator 4
+ 952               	/* #NOAPP */
+ 953 02b4 FFEF      		ldi r31,-1
+ 954 02b6 DF1A      		sub r13,r31
+ 955 02b8 EF0A      		sbc r14,r31
+ 956 02ba FF0A      		sbc r15,r31
+ 957               	.LVL101:
+ 409:bootSAH_5.c   **** 				asm volatile ("nop");
+ 958               		.loc 1 409 0 discriminator 4
+ 959 02bc 22E0      		ldi r18,2
+ 960 02be 820E      		add r8,r18
+ 961 02c0 911C      		adc r9,__zero_reg__
+ 962 02c2 A11C      		adc r10,__zero_reg__
+ 963 02c4 B11C      		adc r11,__zero_reg__
+ 964               	.LVL102:
+ 410:bootSAH_5.c   **** 				
+ 965               		.loc 1 410 0 discriminator 4
+ 966               	/* #APP */
+ 967               	 ;  410 "bootSAH_5.c" 1
+ 968 02c6 0000      		nop
+ 969               	 ;  0 "" 2
+ 412:bootSAH_5.c   **** 			} while (fDataLen);
+ 970               		.loc 1 412 0 discriminator 4
+ 971               	/* #NOAPP */
+ 972 02c8 CD5F      		subi r28,lo8(-259)
+ 973 02ca DE4F      		sbci r29,hi8(-259)
+ 974 02cc 8881      		ld r24,Y
+ 975 02ce 9981      		ldd r25,Y+1
+ 976 02d0 C350      		subi r28,lo8(259)
+ 977 02d2 D140      		sbci r29,hi8(259)
+ 978 02d4 0197      		sbiw r24,1
+ 979 02d6 CD5F      		subi r28,lo8(-259)
+ 980 02d8 DE4F      		sbci r29,hi8(-259)
+ 981 02da 9983      		std Y+1,r25
+ 982 02dc 8883      		st Y,r24
+ 983 02de C350      		subi r28,lo8(259)
+ 984 02e0 D140      		sbci r29,hi8(259)
+ 985               	.LVL103:
+ 413:bootSAH_5.c   **** 			
+ 986               		.loc 1 413 0 discriminator 4
+ 987 02e2 892B      		or r24,r25
+ 988 02e4 01F0      		breq .+2
+ 989 02e6 00C0      		rjmp .L38
+ 990               	.LVL104:
+ 991               	.L26:
+ 415:bootSAH_5.c   **** 			FLASH_EraseSector(fBStatAddr);						
+ 992               		.loc 1 415 0
+ 993 02e8 0E94 0000 		call tiny_delay
+ 994               	.LVL105:
+ 416:bootSAH_5.c   **** 		}
+ 995               		.loc 1 416 0
+ 996 02ec 60E0      		ldi r22,0
+ 997 02ee 70E1      		ldi r23,lo8(16)
+ 998 02f0 80E0      		ldi r24,0
+ 999 02f2 90E0      		ldi r25,0
+ 1000 02f4 0E94 0000 		call FLASH_EraseSector
+ 1001               	.LVL106:
+ 1002               	.L23:
+ 420:bootSAH_5.c   **** 	
+ 1003               		.loc 1 420 0
+ 1004 02f8 0E94 0000 		call tiny_delay
+ 1005               	.LVL107:
+ 1006               	.L39:
+ 422:bootSAH_5.c   **** 
+ 1007               		.loc 1 422 0 discriminator 1
+ 1008 02fc 07B6      		in __tmp_reg__,0x37
+ 1009 02fe 00FC      		sbrc __tmp_reg__,0
+ 1010 0300 00C0      		rjmp .L39
+ 1011               	.L40:
+ 422:bootSAH_5.c   **** 
+ 1012               		.loc 1 422 0 is_stmt 0 discriminator 3
+ 1013 0302 F999      		sbic 0x1f,1
+ 1014 0304 00C0      		rjmp .L40
+ 422:bootSAH_5.c   **** 
+ 1015               		.loc 1 422 0 discriminator 4
+ 1016 0306 81E1      		ldi r24,lo8(17)
+ 1017               	/* #APP */
+ 1018               	 ;  422 "bootSAH_5.c" 1
+ 1019 0308 8093 5700 		sts 87, r24
+ 1020 030c E895      		spm
+ 1021               		
+ 1022               	 ;  0 "" 2
+ 425:bootSAH_5.c   **** 					"clr	r30		\n\t"
+ 1023               		.loc 1 425 0 is_stmt 1 discriminator 4
+ 1024               	 ;  425 "bootSAH_5.c" 1
+ 1025 030e EE27      		clr	r30		
+ 1026 0310 FF27      		clr	r31		
+ 1027 0312 0994      		ijmp			
+ 1028               		
+ 1029               	 ;  0 "" 2
+ 1030               	/* #NOAPP */
+ 1031               	.L41:
+ 433:bootSAH_5.c   ****     }
+ 1032               		.loc 1 433 0 discriminator 1
+ 1033 0314 0E94 0000 		call tiny_delay
+ 1034               	.LVL108:
+ 1035 0318 00C0      		rjmp .L41
+ 1036               		.cfi_endproc
+ 1037               	.LFE12:
+ 1039               		.text
+ 1040               	.global	FLASH_WriteByte
+ 1042               	FLASH_WriteByte:
+ 1043               	.LFB22:
+ 562:bootSAH_5.c   **** 
+ 563:bootSAH_5.c   **** void FLASH_WriteByte(uint32_t faddr, uint8_t wdata)
+ 564:bootSAH_5.c   **** {
+ 1044               		.loc 1 564 0
+ 1045               		.cfi_startproc
+ 1046               	.LVL109:
+ 1047 0102 0F93      		push r16
+ 1048               	.LCFI10:
+ 1049               		.cfi_def_cfa_offset 4
+ 1050               		.cfi_offset 16, -3
+ 1051 0104 1F93      		push r17
+ 1052               	.LCFI11:
+ 1053               		.cfi_def_cfa_offset 5
+ 1054               		.cfi_offset 17, -4
+ 1055 0106 CF93      		push r28
+ 1056               	.LCFI12:
+ 1057               		.cfi_def_cfa_offset 6
+ 1058               		.cfi_offset 28, -5
+ 1059 0108 DF93      		push r29
+ 1060               	.LCFI13:
+ 1061               		.cfi_def_cfa_offset 7
+ 1062               		.cfi_offset 29, -6
+ 1063               	/* prologue: function */
+ 1064               	/* frame size = 0 */
+ 1065               	/* stack size = 4 */
+ 1066               	.L__stack_usage = 4
+ 1067 010a D62F      		mov r29,r22
+ 1068 010c 172F      		mov r17,r23
+ 1069 010e 082F      		mov r16,r24
+ 1070 0110 C42F      		mov r28,r20
+ 565:bootSAH_5.c   **** 	FLASH_UntilReady();
+ 1071               		.loc 1 565 0
+ 1072 0112 0E94 0000 		call FLASH_UntilReady
+ 1073               	.LVL110:
+ 566:bootSAH_5.c   **** 	FLASH_WriteEnable();
+ 1074               		.loc 1 566 0
+ 1075 0116 0E94 0000 		call FLASH_WriteEnable
+ 1076               	.LVL111:
+ 567:bootSAH_5.c   **** 	SPI_PORT  &=  ~(1<<SPI_CS);
+ 1077               		.loc 1 567 0
+ 1078 011a 2898      		cbi 0x5,0
+ 568:bootSAH_5.c   **** 	SPI_Transfer(0x02);
+ 1079               		.loc 1 568 0
+ 1080 011c 82E0      		ldi r24,lo8(2)
+ 1081 011e 0E94 0000 		call SPI_Transfer
+ 1082               	.LVL112:
+ 569:bootSAH_5.c   **** 	SPI_Transfer((faddr >> 16) & 0xff);
+ 1083               		.loc 1 569 0
+ 1084 0122 802F      		mov r24,r16
+ 1085 0124 0E94 0000 		call SPI_Transfer
+ 1086               	.LVL113:
+ 570:bootSAH_5.c   **** 	SPI_Transfer((faddr >> 8) & 0xff);
+ 1087               		.loc 1 570 0
+ 1088 0128 812F      		mov r24,r17
+ 1089 012a 0E94 0000 		call SPI_Transfer
+ 1090               	.LVL114:
+ 571:bootSAH_5.c   **** 	SPI_Transfer(faddr & 0xff);
+ 1091               		.loc 1 571 0
+ 1092 012e 8D2F      		mov r24,r29
+ 1093 0130 0E94 0000 		call SPI_Transfer
+ 1094               	.LVL115:
+ 572:bootSAH_5.c   **** 	SPI_Transfer(wdata & 0xff);
+ 1095               		.loc 1 572 0
+ 1096 0134 8C2F      		mov r24,r28
+ 1097 0136 0E94 0000 		call SPI_Transfer
+ 1098               	.LVL116:
+ 573:bootSAH_5.c   **** 	SPI_PORT  |=   (1<<SPI_CS);
+ 1099               		.loc 1 573 0
+ 1100 013a 289A      		sbi 0x5,0
+ 574:bootSAH_5.c   **** 	tiny_delay();
+ 1101               		.loc 1 574 0
+ 1102 013c 0E94 0000 		call tiny_delay
+ 1103               	.LVL117:
+ 1104               	/* epilogue start */
+ 575:bootSAH_5.c   **** 	FLASH_UntilReady();
+ 576:bootSAH_5.c   **** }
+ 1105               		.loc 1 576 0
+ 1106 0140 DF91      		pop r29
+ 1107 0142 CF91      		pop r28
+ 1108               	.LVL118:
+ 1109 0144 1F91      		pop r17
+ 1110 0146 0F91      		pop r16
+ 575:bootSAH_5.c   **** 	FLASH_UntilReady();
+ 1111               		.loc 1 575 0
+ 1112 0148 0C94 0000 		jmp FLASH_UntilReady
+ 1113               	.LVL119:
+ 1114               		.cfi_endproc
+ 1115               	.LFE22:
+ 1117               	.global	app_start
+ 1118               		.section .bss
+ 1121               	app_start:
+ 1122 0000 0000      		.zero	2
+ 1123               		.text
+ 1124               	.Letext0:
+ 1125               		.file 3 "e:\\programfiles\\atmelstudio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\include\\st
+DEFINED SYMBOLS
+                            *ABS*:00000000 bootSAH_5.c
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:2      *ABS*:0000003e __SP_H__
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:3      *ABS*:0000003d __SP_L__
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:4      *ABS*:0000003f __SREG__
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:5      *ABS*:0000003b __RAMPZ__
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:6      *ABS*:00000000 __tmp_reg__
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:7      *ABS*:00000001 __zero_reg__
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:12     .text:00000000 SPI_Transfer
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:46     .init9:00000000 __jumpMain
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:57     *ABS*:000021ff __stack
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:421    .text.startup:00000000 main
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:96     .text:0000000e delay_ms
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:142    .text:0000002c tiny_delay
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:167    .text:00000038 FLASH_UntilReady
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:206    .text:00000054 FLASH_ResetEnable
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:230    .text:00000062 FLASH_Reset
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:254    .text:00000070 FLASH_WriteEnable
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:278    .text:0000007e FLASH_ReadWord
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:355    .text:000000c6 FLASH_EraseSector
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:1121   .bss:00000000 app_start
+C:\Users\supun\AppData\Local\Temp\ccfjpC20.s:1042   .text:00000102 FLASH_WriteByte
+
+UNDEFINED SYMBOLS
+__do_clear_bss
