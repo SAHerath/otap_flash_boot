@@ -1,33 +1,33 @@
 
-bootSAH_5.elf:     file format elf32-avr
+bootSAH_6.elf:     file format elf32-avr
 
 Sections:
 Idx Name          Size      VMA       LMA       File off  Algn
-  0 .data         00000000  00800200  0003e58a  0000061e  2**0
+  0 .data         00000000  00800200  0003e590  00000624  2**0
                   CONTENTS, ALLOC, LOAD, DATA
-  1 .text         0000058a  0003e000  0003e000  00000094  2**1
+  1 .text         00000590  0003e000  0003e000  00000094  2**1
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-  2 .bss          00000002  00800200  00800200  0000061e  2**0
+  2 .bss          00000002  00800200  00800200  00000624  2**0
                   ALLOC
-  3 .comment      00000030  00000000  00000000  0000061e  2**0
+  3 .comment      00000030  00000000  00000000  00000624  2**0
                   CONTENTS, READONLY
-  4 .note.gnu.avr.deviceinfo 00000040  00000000  00000000  00000650  2**2
+  4 .note.gnu.avr.deviceinfo 00000040  00000000  00000000  00000654  2**2
                   CONTENTS, READONLY
-  5 .debug_aranges 00000030  00000000  00000000  00000690  2**0
+  5 .debug_aranges 00000030  00000000  00000000  00000694  2**0
                   CONTENTS, READONLY, DEBUGGING
-  6 .debug_info   00001496  00000000  00000000  000006c0  2**0
+  6 .debug_info   00001485  00000000  00000000  000006c4  2**0
                   CONTENTS, READONLY, DEBUGGING
-  7 .debug_abbrev 00000d31  00000000  00000000  00001b56  2**0
+  7 .debug_abbrev 00000d40  00000000  00000000  00001b49  2**0
                   CONTENTS, READONLY, DEBUGGING
-  8 .debug_line   00000616  00000000  00000000  00002887  2**0
+  8 .debug_line   0000061b  00000000  00000000  00002889  2**0
                   CONTENTS, READONLY, DEBUGGING
-  9 .debug_frame  00000128  00000000  00000000  00002ea0  2**2
+  9 .debug_frame  00000128  00000000  00000000  00002ea4  2**2
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_str    000006ee  00000000  00000000  00002fc8  2**0
+ 10 .debug_str    000006e1  00000000  00000000  00002fcc  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    00000627  00000000  00000000  000036b6  2**0
+ 11 .debug_loc    0000062d  00000000  00000000  000036ad  2**0
                   CONTENTS, READONLY, DEBUGGING
- 12 .debug_ranges 00000020  00000000  00000000  00003cdd  2**0
+ 12 .debug_ranges 00000020  00000000  00000000  00003cda  2**0
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -115,7 +115,7 @@ Disassembly of section .text:
    3e100:	b2 07       	cpc	r27, r18
    3e102:	e1 f7       	brne	.-8      	; 0x3e0fc <.do_clear_bss_loop>
    3e104:	0f 94 36 f1 	call	0x3e26c	; 0x3e26c <main>
-   3e108:	0d 94 c3 f2 	jmp	0x3e586	; 0x3e586 <_exit>
+   3e108:	0d 94 c6 f2 	jmp	0x3e58c	; 0x3e58c <_exit>
 
 0003e10c <__jumpMain>:
 
@@ -144,9 +144,9 @@ Disassembly of section .text:
    3e11c:	0d 94 00 f0 	jmp	0x3e000	; 0x3e000 <__vectors>
 
 0003e120 <SPI_Transfer>:
-	return UART_DATA_REG;
-}
-*/
+#include <avr/sfr_defs.h>
+
+
 static uint8_t SPI_Transfer(uint8_t spidata)
 {
 	SPDR = spidata;
@@ -206,7 +206,7 @@ void tiny_delay()
    3e156:	08 95       	ret
 
 0003e158 <FLASH_UntilReady>:
-}
+
 
 void FLASH_UntilReady()
 {
@@ -216,8 +216,8 @@ void FLASH_UntilReady()
 	SPI_Transfer(0x05);
    3e15a:	85 e0       	ldi	r24, 0x05	; 5
    3e15c:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
-	return SPDR;
-}
+//************************************************************************
+
 
 void FLASH_UntilReady()
 {
@@ -321,14 +321,10 @@ uint16_t FLASH_ReadWord(uint32_t faddr)
    3e1d2:	28 9a       	sbi	0x05, 0	; 5
 	tiny_delay();
    3e1d4:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
-							//sendchar(temp1 & 0xff);
-							//sendchar(temp2 & 0xff);
-							//sendchar(0x0d);
-							//sendchar(0x0a);					
+				
 	return ((temp1 << 8) | (temp2 & 0x00ff));
    3e1d8:	8c 2f       	mov	r24, r28
    3e1da:	90 e0       	ldi	r25, 0x00	; 0
-
 }
    3e1dc:	9d 2b       	or	r25, r29
    3e1de:	df 91       	pop	r29
@@ -433,9 +429,9 @@ void FLASH_WriteByte(uint32_t faddr, uint8_t wdata)
    3e268:	0d 94 ac f0 	jmp	0x3e158	; 0x3e158 <FLASH_UntilReady>
 
 0003e26c <main>:
-
 //*	for watch dog timer startup
 void (*app_start)(void) = 0x0000;
+
 
 int main(void)
 {
@@ -493,8 +489,8 @@ int main(void)
    3e2a4:	e0 91 00 02 	lds	r30, 0x0200	; 0x800200 <_edata>
    3e2a8:	f0 91 01 02 	lds	r31, 0x0201	; 0x800201 <_edata+0x1>
    3e2ac:	19 95       	eicall
-// 	asm volatile ("nop");			// wait until port has changed
-
+	}
+	
 //************************************************************************
 
 //* Init SPI
@@ -566,7 +562,7 @@ int main(void)
    3e2fe:	e2 06       	cpc	r14, r18
    3e300:	f1 04       	cpc	r15, r1
    3e302:	09 f0       	breq	.+2      	; 0x3e306 <main+0x9a>
-   3e304:	2f c1       	rjmp	.+606    	; 0x3e564 <main+0x2f8>
+   3e304:	32 c1       	rjmp	.+612    	; 0x3e56a <main+0x2fe>
 	{
 		SPI_PORT  &=  ~(1<<SPI_CS);
    3e306:	28 98       	cbi	0x05, 0	; 5
@@ -603,7 +599,7 @@ int main(void)
    3e33c:	03 32       	cpi	r16, 0x23	; 35
    3e33e:	13 42       	sbci	r17, 0x23	; 35
    3e340:	09 f0       	breq	.+2      	; 0x3e344 <main+0xd8>
-   3e342:	10 c1       	rjmp	.+544    	; 0x3e564 <main+0x2f8>
+   3e342:	13 c1       	rjmp	.+550    	; 0x3e56a <main+0x2fe>
 		{
 			
 			SPI_PORT  &=  ~(1<<SPI_CS);
@@ -623,367 +619,377 @@ int main(void)
 			fDataLen = (uint16_t)SPI_Transfer(0) << 8;
    3e35e:	80 e0       	ldi	r24, 0x00	; 0
    3e360:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
-   3e364:	08 2f       	mov	r16, r24
-   3e366:	10 e0       	ldi	r17, 0x00	; 0
-   3e368:	10 2f       	mov	r17, r16
-   3e36a:	00 27       	eor	r16, r16
+   3e364:	18 2f       	mov	r17, r24
 			fDataLen |= (uint16_t)SPI_Transfer(0);
-   3e36c:	80 e0       	ldi	r24, 0x00	; 0
-   3e36e:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
-   3e372:	f8 01       	movw	r30, r16
-   3e374:	e8 2b       	or	r30, r24
-   3e376:	cd 5f       	subi	r28, 0xFD	; 253
-   3e378:	de 4f       	sbci	r29, 0xFE	; 254
-   3e37a:	f9 83       	std	Y+1, r31	; 0x01
-   3e37c:	e8 83       	st	Y, r30
-   3e37e:	c3 50       	subi	r28, 0x03	; 3
-   3e380:	d1 40       	sbci	r29, 0x01	; 1
+   3e366:	80 e0       	ldi	r24, 0x00	; 0
+   3e368:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e36c:	21 2f       	mov	r18, r17
+   3e36e:	30 e0       	ldi	r19, 0x00	; 0
+   3e370:	32 2f       	mov	r19, r18
+   3e372:	22 27       	eor	r18, r18
+   3e374:	a9 01       	movw	r20, r18
+   3e376:	48 2b       	or	r20, r24
+   3e378:	cd 5f       	subi	r28, 0xFD	; 253
+   3e37a:	de 4f       	sbci	r29, 0xFE	; 254
+   3e37c:	59 83       	std	Y+1, r21	; 0x01
+   3e37e:	48 83       	st	Y, r20
+   3e380:	c3 50       	subi	r28, 0x03	; 3
+   3e382:	d1 40       	sbci	r29, 0x01	; 1
 			SPI_PORT  |=   (1<<SPI_CS);
-   3e382:	28 9a       	sbi	0x05, 0	; 5
+   3e384:	28 9a       	sbi	0x05, 0	; 5
 			tiny_delay();
-   3e384:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
-*/
+   3e386:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
+//************************************************************************
 
 	fBStatAddr = 4096;
 	fDLenAddr  = 4098;
 	fDataAddr  = 8192;
 	fCsumAddr  = 4352;
-   3e388:	81 2c       	mov	r8, r1
-   3e38a:	51 e1       	ldi	r21, 0x11	; 17
-   3e38c:	95 2e       	mov	r9, r21
-   3e38e:	a1 2c       	mov	r10, r1
-   3e390:	b1 2c       	mov	r11, r1
-#endif
-*/
+   3e38a:	81 2c       	mov	r8, r1
+   3e38c:	51 e1       	ldi	r21, 0x11	; 17
+   3e38e:	95 2e       	mov	r9, r21
+   3e390:	a1 2c       	mov	r10, r1
+   3e392:	b1 2c       	mov	r11, r1
+	
+//************************************************************************
 
 	fBStatAddr = 4096;
 	fDLenAddr  = 4098;
 	fDataAddr  = 8192;
-   3e392:	c1 2c       	mov	r12, r1
-   3e394:	60 e2       	ldi	r22, 0x20	; 32
-   3e396:	d6 2e       	mov	r13, r22
-   3e398:	e1 2c       	mov	r14, r1
-   3e39a:	f1 2c       	mov	r15, r1
-   3e39c:	9e 01       	movw	r18, r28
-   3e39e:	2f 5f       	subi	r18, 0xFF	; 255
-   3e3a0:	3e 4f       	sbci	r19, 0xFE	; 254
-   3e3a2:	cf 5f       	subi	r28, 0xFF	; 255
-   3e3a4:	de 4f       	sbci	r29, 0xFE	; 254
-   3e3a6:	39 83       	std	Y+1, r19	; 0x01
-   3e3a8:	28 83       	st	Y, r18
-   3e3aa:	c1 50       	subi	r28, 0x01	; 1
-   3e3ac:	d1 40       	sbci	r29, 0x01	; 1
-   3e3ae:	26 01       	movw	r4, r12
-   3e3b0:	37 01       	movw	r6, r14
-   3e3b2:	30 e2       	ldi	r19, 0x20	; 32
-   3e3b4:	53 1a       	sub	r5, r19
-   3e3b6:	61 08       	sbc	r6, r1
-   3e3b8:	71 08       	sbc	r7, r1
+   3e394:	c1 2c       	mov	r12, r1
+   3e396:	60 e2       	ldi	r22, 0x20	; 32
+   3e398:	d6 2e       	mov	r13, r22
+   3e39a:	e1 2c       	mov	r14, r1
+   3e39c:	f1 2c       	mov	r15, r1
+   3e39e:	ce 01       	movw	r24, r28
+   3e3a0:	8f 5f       	subi	r24, 0xFF	; 255
+   3e3a2:	9e 4f       	sbci	r25, 0xFE	; 254
+   3e3a4:	cf 5f       	subi	r28, 0xFF	; 255
+   3e3a6:	de 4f       	sbci	r29, 0xFE	; 254
+   3e3a8:	99 83       	std	Y+1, r25	; 0x01
+   3e3aa:	88 83       	st	Y, r24
+   3e3ac:	c1 50       	subi	r28, 0x01	; 1
+   3e3ae:	d1 40       	sbci	r29, 0x01	; 1
+   3e3b0:	26 01       	movw	r4, r12
+   3e3b2:	37 01       	movw	r6, r14
+   3e3b4:	90 e2       	ldi	r25, 0x20	; 32
+   3e3b6:	59 1a       	sub	r5, r25
+   3e3b8:	61 08       	sbc	r6, r1
+   3e3ba:	71 08       	sbc	r7, r1
 				
-				fExMemSize = EXMEM_PAGE_SIZE;
-				fExMemInc = 0;
+				fMemSize = EXMEM_PAGE_SIZE;
+				fMemIndex = 0;
 				//fRdTries  = 0;
 				fChSumCal = 0;
 				SPI_PORT  &=  ~(1<<SPI_CS);
-   3e3ba:	28 98       	cbi	0x05, 0	; 5
+   3e3bc:	28 98       	cbi	0x05, 0	; 5
 				SPI_Transfer(0x03);
-   3e3bc:	83 e0       	ldi	r24, 0x03	; 3
-   3e3be:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e3be:	83 e0       	ldi	r24, 0x03	; 3
+   3e3c0:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
 				SPI_Transfer((fDataAddr >> 16) & 0xff);
-   3e3c2:	8e 2d       	mov	r24, r14
-   3e3c4:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e3c4:	8e 2d       	mov	r24, r14
+   3e3c6:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
 				SPI_Transfer((fDataAddr >> 8) & 0xff);
-   3e3c8:	8d 2d       	mov	r24, r13
-   3e3ca:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e3ca:	8d 2d       	mov	r24, r13
+   3e3cc:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
 				SPI_Transfer(fDataAddr & 0xff);			
-   3e3ce:	80 e0       	ldi	r24, 0x00	; 0
-   3e3d0:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
-   3e3d4:	ce 01       	movw	r24, r28
-   3e3d6:	01 96       	adiw	r24, 0x01	; 1
-   3e3d8:	1c 01       	movw	r2, r24
-   3e3da:	8c 01       	movw	r16, r24
+   3e3d0:	80 e0       	ldi	r24, 0x00	; 0
+   3e3d2:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e3d6:	fe 01       	movw	r30, r28
+   3e3d8:	31 96       	adiw	r30, 0x01	; 1
+   3e3da:	1f 01       	movw	r2, r30
+   3e3dc:	8f 01       	movw	r16, r30
 			{
 				
-				fExMemSize = EXMEM_PAGE_SIZE;
-				fExMemInc = 0;
+				fMemSize = EXMEM_PAGE_SIZE;
+				fMemIndex = 0;
 				//fRdTries  = 0;
 				fChSumCal = 0;
-   3e3dc:	cb 5f       	subi	r28, 0xFB	; 251
-   3e3de:	de 4f       	sbci	r29, 0xFE	; 254
-   3e3e0:	19 82       	std	Y+1, r1	; 0x01
-   3e3e2:	18 82       	st	Y, r1
-   3e3e4:	c5 50       	subi	r28, 0x05	; 5
-   3e3e6:	d1 40       	sbci	r29, 0x01	; 1
+   3e3de:	cb 5f       	subi	r28, 0xFB	; 251
+   3e3e0:	de 4f       	sbci	r29, 0xFE	; 254
+   3e3e2:	19 82       	std	Y+1, r1	; 0x01
+   3e3e4:	18 82       	st	Y, r1
+   3e3e6:	c5 50       	subi	r28, 0x05	; 5
+   3e3e8:	d1 40       	sbci	r29, 0x01	; 1
 				SPI_Transfer((fDataAddr >> 16) & 0xff);
 				SPI_Transfer((fDataAddr >> 8) & 0xff);
 				SPI_Transfer(fDataAddr & 0xff);			
 				do 
 				{
 					fRdData = SPI_Transfer(0);
-   3e3e8:	80 e0       	ldi	r24, 0x00	; 0
-   3e3ea:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
-					flashBuff[fExMemInc++] = fRdData;
-   3e3ee:	f8 01       	movw	r30, r16
-   3e3f0:	81 93       	st	Z+, r24
-   3e3f2:	8f 01       	movw	r16, r30
+   3e3ea:	80 e0       	ldi	r24, 0x00	; 0
+   3e3ec:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+					flashBuff[fMemIndex++] = fRdData;
+   3e3f0:	f8 01       	movw	r30, r16
+   3e3f2:	81 93       	st	Z+, r24
+   3e3f4:	8f 01       	movw	r16, r30
 					fChSumCal += fRdData;				
-   3e3f4:	cb 5f       	subi	r28, 0xFB	; 251
-   3e3f6:	de 4f       	sbci	r29, 0xFE	; 254
-   3e3f8:	28 81       	ld	r18, Y
-   3e3fa:	39 81       	ldd	r19, Y+1	; 0x01
-   3e3fc:	c5 50       	subi	r28, 0x05	; 5
-   3e3fe:	d1 40       	sbci	r29, 0x01	; 1
-   3e400:	28 0f       	add	r18, r24
-   3e402:	31 1d       	adc	r19, r1
-   3e404:	cb 5f       	subi	r28, 0xFB	; 251
-   3e406:	de 4f       	sbci	r29, 0xFE	; 254
-   3e408:	39 83       	std	Y+1, r19	; 0x01
-   3e40a:	28 83       	st	Y, r18
-   3e40c:	c5 50       	subi	r28, 0x05	; 5
-   3e40e:	d1 40       	sbci	r29, 0x01	; 1
-					fExMemSize--;
-				} while (fExMemSize);		
-   3e410:	cf 5f       	subi	r28, 0xFF	; 255
-   3e412:	de 4f       	sbci	r29, 0xFE	; 254
-   3e414:	88 81       	ld	r24, Y
-   3e416:	99 81       	ldd	r25, Y+1	; 0x01
-   3e418:	c1 50       	subi	r28, 0x01	; 1
-   3e41a:	d1 40       	sbci	r29, 0x01	; 1
-   3e41c:	e8 17       	cp	r30, r24
-   3e41e:	f9 07       	cpc	r31, r25
-   3e420:	19 f7       	brne	.-58     	; 0x3e3e8 <main+0x17c>
+   3e3f6:	cb 5f       	subi	r28, 0xFB	; 251
+   3e3f8:	de 4f       	sbci	r29, 0xFE	; 254
+   3e3fa:	28 81       	ld	r18, Y
+   3e3fc:	39 81       	ldd	r19, Y+1	; 0x01
+   3e3fe:	c5 50       	subi	r28, 0x05	; 5
+   3e400:	d1 40       	sbci	r29, 0x01	; 1
+   3e402:	28 0f       	add	r18, r24
+   3e404:	31 1d       	adc	r19, r1
+   3e406:	cb 5f       	subi	r28, 0xFB	; 251
+   3e408:	de 4f       	sbci	r29, 0xFE	; 254
+   3e40a:	39 83       	std	Y+1, r19	; 0x01
+   3e40c:	28 83       	st	Y, r18
+   3e40e:	c5 50       	subi	r28, 0x05	; 5
+   3e410:	d1 40       	sbci	r29, 0x01	; 1
+					fMemSize--;
+				} while (fMemSize);		
+   3e412:	cf 5f       	subi	r28, 0xFF	; 255
+   3e414:	de 4f       	sbci	r29, 0xFE	; 254
+   3e416:	48 81       	ld	r20, Y
+   3e418:	59 81       	ldd	r21, Y+1	; 0x01
+   3e41a:	c1 50       	subi	r28, 0x01	; 1
+   3e41c:	d1 40       	sbci	r29, 0x01	; 1
+   3e41e:	e4 17       	cp	r30, r20
+   3e420:	f5 07       	cpc	r31, r21
+   3e422:	19 f7       	brne	.-58     	; 0x3e3ea <main+0x17e>
 				SPI_PORT  |=   (1<<SPI_CS);
-   3e422:	28 9a       	sbi	0x05, 0	; 5
+   3e424:	28 9a       	sbi	0x05, 0	; 5
 				tiny_delay();
-   3e424:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
+   3e426:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
 
 		
 				SPI_PORT  &=  ~(1<<SPI_CS);
-   3e428:	28 98       	cbi	0x05, 0	; 5
+   3e42a:	28 98       	cbi	0x05, 0	; 5
 				SPI_Transfer(0x03);
-   3e42a:	83 e0       	ldi	r24, 0x03	; 3
-   3e42c:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e42c:	83 e0       	ldi	r24, 0x03	; 3
+   3e42e:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
 				SPI_Transfer((fCsumAddr >> 16) & 0xff);
-   3e430:	80 e0       	ldi	r24, 0x00	; 0
-   3e432:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e432:	80 e0       	ldi	r24, 0x00	; 0
+   3e434:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
 				SPI_Transfer((fCsumAddr >> 8) & 0xff);
-   3e436:	89 2d       	mov	r24, r9
-   3e438:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e438:	89 2d       	mov	r24, r9
+   3e43a:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
 				SPI_Transfer(fCsumAddr & 0xff);				
-   3e43c:	88 2d       	mov	r24, r8
-   3e43e:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e43e:	88 2d       	mov	r24, r8
+   3e440:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
 				fChSumRev = (uint16_t)SPI_Transfer(0) << 8;
-   3e442:	80 e0       	ldi	r24, 0x00	; 0
-   3e444:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
-   3e448:	08 2f       	mov	r16, r24
-   3e44a:	10 e0       	ldi	r17, 0x00	; 0
-   3e44c:	10 2f       	mov	r17, r16
-   3e44e:	00 27       	eor	r16, r16
+   3e444:	80 e0       	ldi	r24, 0x00	; 0
+   3e446:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e44a:	08 2f       	mov	r16, r24
+   3e44c:	10 e0       	ldi	r17, 0x00	; 0
+   3e44e:	10 2f       	mov	r17, r16
+   3e450:	00 27       	eor	r16, r16
 				fChSumRev |= (uint16_t)SPI_Transfer(0);			
-   3e450:	80 e0       	ldi	r24, 0x00	; 0
-   3e452:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
-   3e456:	08 2b       	or	r16, r24
+   3e452:	80 e0       	ldi	r24, 0x00	; 0
+   3e454:	0f 94 90 f0 	call	0x3e120	; 0x3e120 <SPI_Transfer>
+   3e458:	08 2b       	or	r16, r24
 				SPI_PORT  |=   (1<<SPI_CS);
-   3e458:	28 9a       	sbi	0x05, 0	; 5
+   3e45a:	28 9a       	sbi	0x05, 0	; 5
 				tiny_delay();
-   3e45a:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
+   3e45c:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
 		
 				if(fChSumRev != fChSumCal)
-   3e45e:	cb 5f       	subi	r28, 0xFB	; 251
-   3e460:	de 4f       	sbci	r29, 0xFE	; 254
-   3e462:	e8 81       	ld	r30, Y
-   3e464:	f9 81       	ldd	r31, Y+1	; 0x01
-   3e466:	c5 50       	subi	r28, 0x05	; 5
-   3e468:	d1 40       	sbci	r29, 0x01	; 1
-   3e46a:	e0 17       	cp	r30, r16
-   3e46c:	f1 07       	cpc	r31, r17
-   3e46e:	09 f0       	breq	.+2      	; 0x3e472 <main+0x206>
-   3e470:	71 c0       	rjmp	.+226    	; 0x3e554 <main+0x2e8>
+   3e460:	cb 5f       	subi	r28, 0xFB	; 251
+   3e462:	de 4f       	sbci	r29, 0xFE	; 254
+   3e464:	88 81       	ld	r24, Y
+   3e466:	99 81       	ldd	r25, Y+1	; 0x01
+   3e468:	c5 50       	subi	r28, 0x05	; 5
+   3e46a:	d1 40       	sbci	r29, 0x01	; 1
+   3e46c:	80 17       	cp	r24, r16
+   3e46e:	91 07       	cpc	r25, r17
+   3e470:	09 f0       	breq	.+2      	; 0x3e474 <main+0x208>
+   3e472:	73 c0       	rjmp	.+230    	; 0x3e55a <main+0x2ee>
 				
  				ftempAddr  = fPageAddr;
- 				fInMemSize = SPM_PAGESIZE;
- 				fInMemInc  = 0;
+ 				fMemSize = SPM_PAGESIZE;
+ 				fMemIndex  = 0;
 				 
 				if (fPageAddr >= APP_END )
-   3e472:	c1 14       	cp	r12, r1
-   3e474:	f0 ee       	ldi	r31, 0xE0	; 224
-   3e476:	df 06       	cpc	r13, r31
-   3e478:	f3 e0       	ldi	r31, 0x03	; 3
-   3e47a:	ef 06       	cpc	r14, r31
-   3e47c:	f1 04       	cpc	r15, r1
-   3e47e:	09 f4       	brne	.+2      	; 0x3e482 <main+0x216>
-   3e480:	69 c0       	rjmp	.+210    	; 0x3e554 <main+0x2e8>
+   3e474:	c1 14       	cp	r12, r1
+   3e476:	90 ee       	ldi	r25, 0xE0	; 224
+   3e478:	d9 06       	cpc	r13, r25
+   3e47a:	93 e0       	ldi	r25, 0x03	; 3
+   3e47c:	e9 06       	cpc	r14, r25
+   3e47e:	f1 04       	cpc	r15, r1
+   3e480:	09 f4       	brne	.+2      	; 0x3e484 <main+0x218>
+   3e482:	6b c0       	rjmp	.+214    	; 0x3e55a <main+0x2ee>
 				{
+					//todo: flash write error msg
 					break;
 				}
 					
 				boot_page_erase_safe(fPageAddr);
-   3e482:	07 b6       	in	r0, 0x37	; 55
-   3e484:	00 fc       	sbrc	r0, 0
-   3e486:	fd cf       	rjmp	.-6      	; 0x3e482 <main+0x216>
-   3e488:	f9 99       	sbic	0x1f, 1	; 31
-   3e48a:	fe cf       	rjmp	.-4      	; 0x3e488 <main+0x21c>
-   3e48c:	83 e0       	ldi	r24, 0x03	; 3
-   3e48e:	f2 01       	movw	r30, r4
-   3e490:	60 92 5b 00 	sts	0x005B, r6	; 0x80005b <__TEXT_REGION_LENGTH__+0x70005b>
-   3e494:	80 93 57 00 	sts	0x0057, r24	; 0x800057 <__TEXT_REGION_LENGTH__+0x700057>
-   3e498:	e8 95       	spm
+   3e484:	07 b6       	in	r0, 0x37	; 55
+   3e486:	00 fc       	sbrc	r0, 0
+   3e488:	fd cf       	rjmp	.-6      	; 0x3e484 <main+0x218>
+   3e48a:	f9 99       	sbic	0x1f, 1	; 31
+   3e48c:	fe cf       	rjmp	.-4      	; 0x3e48a <main+0x21e>
+   3e48e:	83 e0       	ldi	r24, 0x03	; 3
+   3e490:	f2 01       	movw	r30, r4
+   3e492:	60 92 5b 00 	sts	0x005B, r6	; 0x80005b <__TEXT_REGION_LENGTH__+0x70005b>
+   3e496:	80 93 57 00 	sts	0x0057, r24	; 0x800057 <__TEXT_REGION_LENGTH__+0x700057>
+   3e49a:	e8 95       	spm
 				boot_spm_busy_wait();			
-   3e49a:	07 b6       	in	r0, 0x37	; 55
-   3e49c:	00 fc       	sbrc	r0, 0
-   3e49e:	fd cf       	rjmp	.-6      	; 0x3e49a <main+0x22e>
-   3e4a0:	b3 01       	movw	r22, r6
-   3e4a2:	a2 01       	movw	r20, r4
-					fLSByte = flashBuff[fInMemInc];
-					fInMemInc++;
-					fMSByte = flashBuff[fInMemInc];
-					fInMemInc++;
-
-					fDataWord = (fMSByte << 8) | fLSByte;
-   3e4a4:	f1 01       	movw	r30, r2
-   3e4a6:	81 81       	ldd	r24, Z+1	; 0x01
-   3e4a8:	90 e0       	ldi	r25, 0x00	; 0
-   3e4aa:	98 2f       	mov	r25, r24
-   3e4ac:	88 27       	eor	r24, r24
-   3e4ae:	20 81       	ld	r18, Z
-   3e4b0:	82 2b       	or	r24, r18
-						
-					boot_page_fill_safe(ftempAddr,fDataWord);
-   3e4b2:	07 b6       	in	r0, 0x37	; 55
-   3e4b4:	00 fc       	sbrc	r0, 0
-   3e4b6:	fd cf       	rjmp	.-6      	; 0x3e4b2 <main+0x246>
-   3e4b8:	f9 99       	sbic	0x1f, 1	; 31
-   3e4ba:	fe cf       	rjmp	.-4      	; 0x3e4b8 <main+0x24c>
-   3e4bc:	21 e0       	ldi	r18, 0x01	; 1
-   3e4be:	0c 01       	movw	r0, r24
-   3e4c0:	fa 01       	movw	r30, r20
-   3e4c2:	60 93 5b 00 	sts	0x005B, r22	; 0x80005b <__TEXT_REGION_LENGTH__+0x70005b>
-   3e4c6:	20 93 57 00 	sts	0x0057, r18	; 0x800057 <__TEXT_REGION_LENGTH__+0x700057>
-   3e4ca:	e8 95       	spm
-   3e4cc:	11 24       	eor	r1, r1
+   3e49c:	07 b6       	in	r0, 0x37	; 55
+   3e49e:	00 fc       	sbrc	r0, 0
+   3e4a0:	fd cf       	rjmp	.-6      	; 0x3e49c <main+0x230>
+   3e4a2:	b3 01       	movw	r22, r6
+   3e4a4:	a2 01       	movw	r20, r4
 					
+				do 
+				{
+					fLSByte = flashBuff[fMemIndex++];
+					//fMemIndex++;
+					asm volatile ("nop");
+   3e4a6:	00 00       	nop
+					fMSByte = flashBuff[fMemIndex++];
+					//fMemIndex++;
+					fDataWord = (fMSByte << 8) | fLSByte;
+   3e4a8:	f1 01       	movw	r30, r2
+   3e4aa:	81 81       	ldd	r24, Z+1	; 0x01
+   3e4ac:	90 e0       	ldi	r25, 0x00	; 0
+   3e4ae:	98 2f       	mov	r25, r24
+   3e4b0:	88 27       	eor	r24, r24
+   3e4b2:	20 81       	ld	r18, Z
+   3e4b4:	82 2b       	or	r24, r18
+						
+					boot_page_fill_safe(ftempAddr,fDataWord);					
+   3e4b6:	07 b6       	in	r0, 0x37	; 55
+   3e4b8:	00 fc       	sbrc	r0, 0
+   3e4ba:	fd cf       	rjmp	.-6      	; 0x3e4b6 <main+0x24a>
+   3e4bc:	f9 99       	sbic	0x1f, 1	; 31
+   3e4be:	fe cf       	rjmp	.-4      	; 0x3e4bc <main+0x250>
+   3e4c0:	21 e0       	ldi	r18, 0x01	; 1
+   3e4c2:	0c 01       	movw	r0, r24
+   3e4c4:	fa 01       	movw	r30, r20
+   3e4c6:	60 93 5b 00 	sts	0x005B, r22	; 0x80005b <__TEXT_REGION_LENGTH__+0x70005b>
+   3e4ca:	20 93 57 00 	sts	0x0057, r18	; 0x800057 <__TEXT_REGION_LENGTH__+0x700057>
+   3e4ce:	e8 95       	spm
+   3e4d0:	11 24       	eor	r1, r1
 						
 					ftempAddr  = ftempAddr + 2;
-   3e4ce:	4e 5f       	subi	r20, 0xFE	; 254
-   3e4d0:	5f 4f       	sbci	r21, 0xFF	; 255
-   3e4d2:	6f 4f       	sbci	r22, 0xFF	; 255
-   3e4d4:	7f 4f       	sbci	r23, 0xFF	; 255
+   3e4d2:	4e 5f       	subi	r20, 0xFE	; 254
+   3e4d4:	5f 4f       	sbci	r21, 0xFF	; 255
+   3e4d6:	6f 4f       	sbci	r22, 0xFF	; 255
+   3e4d8:	7f 4f       	sbci	r23, 0xFF	; 255
 					asm volatile ("nop");	
-   3e4d6:	00 00       	nop
-   3e4d8:	32 e0       	ldi	r19, 0x02	; 2
-   3e4da:	23 0e       	add	r2, r19
-   3e4dc:	31 1c       	adc	r3, r1
-					fInMemSize = fInMemSize - 2;
-				} while (fInMemSize);
-   3e4de:	cf 5f       	subi	r28, 0xFF	; 255
-   3e4e0:	de 4f       	sbci	r29, 0xFE	; 254
-   3e4e2:	88 81       	ld	r24, Y
-   3e4e4:	99 81       	ldd	r25, Y+1	; 0x01
-   3e4e6:	c1 50       	subi	r28, 0x01	; 1
-   3e4e8:	d1 40       	sbci	r29, 0x01	; 1
-   3e4ea:	82 15       	cp	r24, r2
-   3e4ec:	93 05       	cpc	r25, r3
-   3e4ee:	d1 f6       	brne	.-76     	; 0x3e4a4 <main+0x238>
+   3e4da:	00 00       	nop
+   3e4dc:	32 e0       	ldi	r19, 0x02	; 2
+   3e4de:	23 0e       	add	r2, r19
+   3e4e0:	31 1c       	adc	r3, r1
+					fMemSize = fMemSize - 2;
+				} while (fMemSize);
+   3e4e2:	cf 5f       	subi	r28, 0xFF	; 255
+   3e4e4:	de 4f       	sbci	r29, 0xFE	; 254
+   3e4e6:	88 81       	ld	r24, Y
+   3e4e8:	99 81       	ldd	r25, Y+1	; 0x01
+   3e4ea:	c1 50       	subi	r28, 0x01	; 1
+   3e4ec:	d1 40       	sbci	r29, 0x01	; 1
+   3e4ee:	82 15       	cp	r24, r2
+   3e4f0:	93 05       	cpc	r25, r3
+   3e4f2:	c9 f6       	brne	.-78     	; 0x3e4a6 <main+0x23a>
 					
 				boot_page_write_safe(fPageAddr);
-   3e4f0:	07 b6       	in	r0, 0x37	; 55
-   3e4f2:	00 fc       	sbrc	r0, 0
-   3e4f4:	fd cf       	rjmp	.-6      	; 0x3e4f0 <main+0x284>
-   3e4f6:	f9 99       	sbic	0x1f, 1	; 31
-   3e4f8:	fe cf       	rjmp	.-4      	; 0x3e4f6 <main+0x28a>
-   3e4fa:	95 e0       	ldi	r25, 0x05	; 5
-   3e4fc:	f2 01       	movw	r30, r4
-   3e4fe:	60 92 5b 00 	sts	0x005B, r6	; 0x80005b <__TEXT_REGION_LENGTH__+0x70005b>
-   3e502:	90 93 57 00 	sts	0x0057, r25	; 0x800057 <__TEXT_REGION_LENGTH__+0x700057>
-   3e506:	e8 95       	spm
+   3e4f4:	07 b6       	in	r0, 0x37	; 55
+   3e4f6:	00 fc       	sbrc	r0, 0
+   3e4f8:	fd cf       	rjmp	.-6      	; 0x3e4f4 <main+0x288>
+   3e4fa:	f9 99       	sbic	0x1f, 1	; 31
+   3e4fc:	fe cf       	rjmp	.-4      	; 0x3e4fa <main+0x28e>
+   3e4fe:	95 e0       	ldi	r25, 0x05	; 5
+   3e500:	f2 01       	movw	r30, r4
+   3e502:	60 92 5b 00 	sts	0x005B, r6	; 0x80005b <__TEXT_REGION_LENGTH__+0x70005b>
+   3e506:	90 93 57 00 	sts	0x0057, r25	; 0x800057 <__TEXT_REGION_LENGTH__+0x700057>
+   3e50a:	e8 95       	spm
 				boot_spm_busy_wait();
-   3e508:	07 b6       	in	r0, 0x37	; 55
-   3e50a:	00 fc       	sbrc	r0, 0
-   3e50c:	fd cf       	rjmp	.-6      	; 0x3e508 <main+0x29c>
+   3e50c:	07 b6       	in	r0, 0x37	; 55
+   3e50e:	00 fc       	sbrc	r0, 0
+   3e510:	fd cf       	rjmp	.-6      	; 0x3e50c <main+0x2a0>
 				boot_rww_enable_safe();
-   3e50e:	07 b6       	in	r0, 0x37	; 55
-   3e510:	00 fc       	sbrc	r0, 0
-   3e512:	fd cf       	rjmp	.-6      	; 0x3e50e <main+0x2a2>
-   3e514:	f9 99       	sbic	0x1f, 1	; 31
-   3e516:	fe cf       	rjmp	.-4      	; 0x3e514 <main+0x2a8>
-   3e518:	e1 e1       	ldi	r30, 0x11	; 17
-   3e51a:	e0 93 57 00 	sts	0x0057, r30	; 0x800057 <__TEXT_REGION_LENGTH__+0x700057>
-   3e51e:	e8 95       	spm
+   3e512:	07 b6       	in	r0, 0x37	; 55
+   3e514:	00 fc       	sbrc	r0, 0
+   3e516:	fd cf       	rjmp	.-6      	; 0x3e512 <main+0x2a6>
+   3e518:	f9 99       	sbic	0x1f, 1	; 31
+   3e51a:	fe cf       	rjmp	.-4      	; 0x3e518 <main+0x2ac>
+   3e51c:	e1 e1       	ldi	r30, 0x11	; 17
+   3e51e:	e0 93 57 00 	sts	0x0057, r30	; 0x800057 <__TEXT_REGION_LENGTH__+0x700057>
+   3e522:	e8 95       	spm
 					
 				fPageAddr += SPM_PAGESIZE;
 				fDataAddr += EXMEM_PAGE_SIZE;
-   3e520:	ff ef       	ldi	r31, 0xFF	; 255
-   3e522:	df 1a       	sub	r13, r31
-   3e524:	ef 0a       	sbc	r14, r31
-   3e526:	ff 0a       	sbc	r15, r31
+   3e524:	ff ef       	ldi	r31, 0xFF	; 255
+   3e526:	df 1a       	sub	r13, r31
+   3e528:	ef 0a       	sbc	r14, r31
+   3e52a:	ff 0a       	sbc	r15, r31
 				fCsumAddr += 2;
-   3e528:	22 e0       	ldi	r18, 0x02	; 2
-   3e52a:	82 0e       	add	r8, r18
-   3e52c:	91 1c       	adc	r9, r1
-   3e52e:	a1 1c       	adc	r10, r1
-   3e530:	b1 1c       	adc	r11, r1
+   3e52c:	22 e0       	ldi	r18, 0x02	; 2
+   3e52e:	82 0e       	add	r8, r18
+   3e530:	91 1c       	adc	r9, r1
+   3e532:	a1 1c       	adc	r10, r1
+   3e534:	b1 1c       	adc	r11, r1
 				asm volatile ("nop");
-   3e532:	00 00       	nop
+   3e536:	00 00       	nop
 				
-				fDataLen--;
-   3e534:	cd 5f       	subi	r28, 0xFD	; 253
-   3e536:	de 4f       	sbci	r29, 0xFE	; 254
-   3e538:	88 81       	ld	r24, Y
-   3e53a:	99 81       	ldd	r25, Y+1	; 0x01
-   3e53c:	c3 50       	subi	r28, 0x03	; 3
-   3e53e:	d1 40       	sbci	r29, 0x01	; 1
-   3e540:	01 97       	sbiw	r24, 0x01	; 1
-   3e542:	cd 5f       	subi	r28, 0xFD	; 253
-   3e544:	de 4f       	sbci	r29, 0xFE	; 254
-   3e546:	99 83       	std	Y+1, r25	; 0x01
-   3e548:	88 83       	st	Y, r24
-   3e54a:	c3 50       	subi	r28, 0x03	; 3
-   3e54c:	d1 40       	sbci	r29, 0x01	; 1
-			} while (fDataLen);
-   3e54e:	89 2b       	or	r24, r25
-   3e550:	09 f0       	breq	.+2      	; 0x3e554 <main+0x2e8>
-   3e552:	2d cf       	rjmp	.-422    	; 0x3e3ae <main+0x142>
-			
+				fDLenTemp--;
+   3e538:	cd 5f       	subi	r28, 0xFD	; 253
+   3e53a:	de 4f       	sbci	r29, 0xFE	; 254
+   3e53c:	48 81       	ld	r20, Y
+   3e53e:	59 81       	ldd	r21, Y+1	; 0x01
+   3e540:	c3 50       	subi	r28, 0x03	; 3
+   3e542:	d1 40       	sbci	r29, 0x01	; 1
+   3e544:	41 50       	subi	r20, 0x01	; 1
+   3e546:	51 09       	sbc	r21, r1
+   3e548:	cd 5f       	subi	r28, 0xFD	; 253
+   3e54a:	de 4f       	sbci	r29, 0xFE	; 254
+   3e54c:	59 83       	std	Y+1, r21	; 0x01
+   3e54e:	48 83       	st	Y, r20
+   3e550:	c3 50       	subi	r28, 0x03	; 3
+   3e552:	d1 40       	sbci	r29, 0x01	; 1
+			} while (fDLenTemp);
+   3e554:	45 2b       	or	r20, r21
+   3e556:	09 f0       	breq	.+2      	; 0x3e55a <main+0x2ee>
+   3e558:	2b cf       	rjmp	.-426    	; 0x3e3b0 <main+0x144>
+				}
+				
+				fDLenTemp--;
+			} while (fDLenTemp);
+*/			
 			tiny_delay();
-   3e554:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
+   3e55a:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
 			FLASH_EraseSector(fBStatAddr);						
-   3e558:	60 e0       	ldi	r22, 0x00	; 0
-   3e55a:	70 e1       	ldi	r23, 0x10	; 16
-   3e55c:	80 e0       	ldi	r24, 0x00	; 0
-   3e55e:	90 e0       	ldi	r25, 0x00	; 0
-   3e560:	0f 94 f3 f0 	call	0x3e1e6	; 0x3e1e6 <FLASH_EraseSector>
+   3e55e:	60 e0       	ldi	r22, 0x00	; 0
+   3e560:	70 e1       	ldi	r23, 0x10	; 16
+   3e562:	80 e0       	ldi	r24, 0x00	; 0
+   3e564:	90 e0       	ldi	r25, 0x00	; 0
+   3e566:	0f 94 f3 f0 	call	0x3e1e6	; 0x3e1e6 <FLASH_EraseSector>
 		}
 	}
 	
 	tiny_delay();
-   3e564:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
+   3e56a:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
 	
 	boot_rww_enable_safe();				// enable application section
-   3e568:	07 b6       	in	r0, 0x37	; 55
-   3e56a:	00 fc       	sbrc	r0, 0
-   3e56c:	fd cf       	rjmp	.-6      	; 0x3e568 <main+0x2fc>
-   3e56e:	f9 99       	sbic	0x1f, 1	; 31
-   3e570:	fe cf       	rjmp	.-4      	; 0x3e56e <main+0x302>
-   3e572:	81 e1       	ldi	r24, 0x11	; 17
-   3e574:	80 93 57 00 	sts	0x0057, r24	; 0x800057 <__TEXT_REGION_LENGTH__+0x700057>
-   3e578:	e8 95       	spm
+   3e56e:	07 b6       	in	r0, 0x37	; 55
+   3e570:	00 fc       	sbrc	r0, 0
+   3e572:	fd cf       	rjmp	.-6      	; 0x3e56e <main+0x302>
+   3e574:	f9 99       	sbic	0x1f, 1	; 31
+   3e576:	fe cf       	rjmp	.-4      	; 0x3e574 <main+0x308>
+   3e578:	81 e1       	ldi	r24, 0x11	; 17
+   3e57a:	80 93 57 00 	sts	0x0057, r24	; 0x800057 <__TEXT_REGION_LENGTH__+0x700057>
+   3e57e:	e8 95       	spm
 
 	// leaving bootloader  # bye bye # sayonara #
 	asm volatile(
-   3e57a:	ee 27       	eor	r30, r30
-   3e57c:	ff 27       	eor	r31, r31
-   3e57e:	09 94       	ijmp
+   3e580:	ee 27       	eor	r30, r30
+   3e582:	ff 27       	eor	r31, r31
+   3e584:	09 94       	ijmp
 					"ijmp			\n\t"
 				);
 	
     for(;;)
     {		
 		tiny_delay();
-   3e580:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
-   3e584:	fd cf       	rjmp	.-6      	; 0x3e580 <main+0x314>
+   3e586:	0f 94 a6 f0 	call	0x3e14c	; 0x3e14c <tiny_delay>
+   3e58a:	fd cf       	rjmp	.-6      	; 0x3e586 <main+0x31a>
 
-0003e586 <_exit>:
-   3e586:	f8 94       	cli
+0003e58c <_exit>:
+   3e58c:	f8 94       	cli
 
-0003e588 <__stop_program>:
-   3e588:	ff cf       	rjmp	.-2      	; 0x3e588 <__stop_program>
+0003e58e <__stop_program>:
+   3e58e:	ff cf       	rjmp	.-2      	; 0x3e58e <__stop_program>

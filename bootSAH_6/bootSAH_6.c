@@ -1,7 +1,7 @@
 /*
- * bootSAH_5.c
+ * bootSAH_6.c
  *
- * Created: 19/09/11 07:50:32 PM
+ * Created: 19/09/13 12:52:32 PM
  * Author : supun
  */ 
 
@@ -34,46 +34,6 @@
 #define BOOT_CSUM_ADDR  4352    // byte addr
 #define BOOT_DATA_ADDR  8192    // byte addr
 
-#define	_DEBUG_SERIAL_
-
-#ifndef BAUDRATE
-	#define BAUDRATE 115200
-#endif
-
-#ifndef UART_BAUDRATE_DOUBLE_SPEED
-	#if defined (__AVR_ATmega32__)
-		#define UART_BAUDRATE_DOUBLE_SPEED 0
-	#else
-		#define UART_BAUDRATE_DOUBLE_SPEED 1
-	#endif
-#endif
-
-/* 
- * ATMega with two USART, use UART0 
- * configured for atmega2560 
- */
-#define	UART_BAUD_RATE_LOW			UBRR0L
-#define	UART_STATUS_REG				UCSR0A
-#define	UART_CONTROL_REG			UCSR0B
-#define	UART_ENABLE_TRANSMITTER		TXEN0
-#define	UART_ENABLE_RECEIVER		RXEN0
-#define	UART_TRANSMIT_COMPLETE		TXC0
-#define	UART_RECEIVE_COMPLETE		RXC0
-#define	UART_DATA_REG				UDR0
-#define	UART_DOUBLE_SPEED			U2X0
-
-/*
- * Macro to calculate UBBR from XTAL and baudrate
- */
-#if defined(__AVR_ATmega32__) && UART_BAUDRATE_DOUBLE_SPEED
-	#define UART_BAUD_SELECT(baudRate,xtalCpu) ((xtalCpu / 4 / baudRate - 1) / 2)
-#elif defined(__AVR_ATmega32__)
-	#define UART_BAUD_SELECT(baudRate,xtalCpu) ((xtalCpu / 8 / baudRate - 1) / 2)
-#elif UART_BAUDRATE_DOUBLE_SPEED
-	#define UART_BAUD_SELECT(baudRate,xtalCpu) (((float)(xtalCpu))/(((float)(baudRate))*8.0)-1.0+0.5)
-#else
-	#define UART_BAUD_SELECT(baudRate,xtalCpu) (((float)(xtalCpu))/(((float)(baudRate))*16.0)-1.0+0.5)
-#endif
 
 
 
@@ -90,24 +50,11 @@
 
 #define APP_END  (FLASHEND -(2*BOOTSIZE) + 1)
 
-/*
- * use 16bit address variable for ATmegas with <= 64K flash
- */
-#if defined(RAMPZ)
-	typedef uint32_t address_t;
-#else
-	typedef uint16_t address_t;
-#endif
 
-//char hexArr[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 
 /*
  * function prototypes
  */
-//void sendchar(char c);
-//void printByte(uint8_t numData);
-//static int	Serial_Available(void);
-//static unsigned char recchar(void);
 void delay_ms(unsigned int timedelay);
 void tiny_delay(void);		
 static uint8_t SPI_Transfer(uint8_t spidata);
@@ -120,30 +67,21 @@ void FLASH_EraseSector(uint32_t faddr);
 void FLASH_WriteByte(uint32_t faddr, uint8_t wdata);
 
 /*
-static void sendchar(char c)
-{
-	UART_DATA_REG	=	c;										// prepare transmission
-	while (!(UART_STATUS_REG & (1 << UART_TRANSMIT_COMPLETE)));	// wait until byte sent
-	UART_STATUS_REG |= (1 << UART_TRANSMIT_COMPLETE);			// delete TXCflag
-}
-
-static void printByte(uint8_t numData)
-{
-	char chData1, chData2;
-	
-	chData1 = hexArr[(numData >> 4)];
-	sendchar(chData1);
-	chData2 = hexArr[(numData & 0xF)];
-	sendchar(chData2);
-}
-*/
-
-/*
  * since this bootloader is not linked against the avr-gcc crt1 functions,
  * to reduce the code size, we need to provide our own initialization
  */
 void __jumpMain	(void) __attribute__ ((naked)) __attribute__ ((section (".init9")));
 #include <avr/sfr_defs.h>
+
+
+static uint8_t SPI_Transfer(uint8_t spidata)
+{
+	SPDR = spidata;
+	asm volatile("nop");			// small delay
+	while(!(SPSR & (1<<SPIF)));		// Wait for transmission complete
+
+	return SPDR;
+}
 
 //*****************************************************************************
 void __jumpMain(void)
@@ -169,6 +107,7 @@ void __jumpMain(void)
 //*	for watch dog timer startup
 void (*app_start)(void) = 0x0000;
 
+
 int main(void)
 {
 	uint32_t fMemStatus = 0;
@@ -178,29 +117,24 @@ int main(void)
 	
 	uint32_t fDLenAddr  = 0;
 	uint16_t fDataLen   = 0;
+	uint16_t fDLenTemp	= 0;
 	
 	uint32_t fDataAddr  = 0;
 	uint8_t  fRdData    = 0;
-	//uint8_t  fRdTries   = 0;
 	
 	uint32_t fCsumAddr  = 0;
 	uint16_t fChSumCal  = 0;
 	uint16_t fChSumRev  = 0;
 	
-	//address_t address	= 0;
-	//address_t fPageAddr = 0;
-	
 	uint32_t ftempAddr	= 0;
 	uint32_t fPageAddr  = 0;
 	
-	//unsigned char	msgBuffer[285];
 	uint8_t flashBuff[256];
-	//uint8_t	*p;
 	
 	uint8_t  fLSByte, fMSByte;
 	uint16_t fDataWord;
-	uint16_t fExMemSize, fInMemSize;
-	uint16_t fExMemInc, fInMemInc;
+	uint16_t fMemSize;
+	uint16_t fMemIndex;
 		
 		
 
@@ -233,19 +167,6 @@ int main(void)
 	
 //************************************************************************
 
-//* Init UART
-//*set baudrate and enable USART receiver and transmiter without interrupts
-
-// #if UART_BAUDRATE_DOUBLE_SPEED
-// 	UART_STATUS_REG		|=	(1 <<UART_DOUBLE_SPEED);
-// #endif
-// 	UART_BAUD_RATE_LOW	=	UART_BAUD_SELECT(BAUDRATE,F_CPU);
-// 	UART_CONTROL_REG	=	(1 << UART_ENABLE_RECEIVER) | (1 << UART_ENABLE_TRANSMITTER);
-// 
-// 	asm volatile ("nop");			// wait until port has changed
-
-//************************************************************************
-
 //* Init SPI
 	SPI_DDR = (	(0<<SPI_MISO)|
 				(1<<SPI_MOSI)|
@@ -267,25 +188,6 @@ int main(void)
 	asm volatile ("nop");				// wait until port has changed
 	
 //************************************************************************
-
-/*	
-#ifdef _DEBUG_SERIAL_
-
-	sendchar('u');
-	sendchar('t');
-	sendchar('e');
-	sendchar('c');
-	sendchar('h');
-	sendchar('_');
-	sendchar('B');
-	sendchar('B');
-
-	sendchar(0x0d);
-	sendchar(0x0a);
-
-	delay_ms(100);
-#endif
-*/
 
 	fBStatAddr = 4096;
 	fDLenAddr  = 4098;
@@ -331,12 +233,14 @@ int main(void)
 			fDataLen |= (uint16_t)SPI_Transfer(0);
 			SPI_PORT  |=   (1<<SPI_CS);
 			tiny_delay();
+			
+			fDLenTemp = fDataLen;
 
 			do 
 			{
 				
-				fExMemSize = EXMEM_PAGE_SIZE;
-				fExMemInc = 0;
+				fMemSize = EXMEM_PAGE_SIZE;
+				fMemIndex = 0;
 				//fRdTries  = 0;
 				fChSumCal = 0;
 				SPI_PORT  &=  ~(1<<SPI_CS);
@@ -347,10 +251,10 @@ int main(void)
 				do 
 				{
 					fRdData = SPI_Transfer(0);
-					flashBuff[fExMemInc++] = fRdData;
+					flashBuff[fMemIndex++] = fRdData;
 					fChSumCal += fRdData;				
-					fExMemSize--;
-				} while (fExMemSize);		
+					fMemSize--;
+				} while (fMemSize);		
 				SPI_PORT  |=   (1<<SPI_CS);
 				tiny_delay();
 
@@ -367,16 +271,17 @@ int main(void)
 		
 				if(fChSumRev != fChSumCal)
 				{
-
+					//todo: flash write error msg
 					break;
 				}
 				
  				ftempAddr  = fPageAddr;
- 				fInMemSize = SPM_PAGESIZE;
- 				fInMemInc  = 0;
+ 				fMemSize = SPM_PAGESIZE;
+ 				fMemIndex  = 0;
 				 
 				if (fPageAddr >= APP_END )
 				{
+					//todo: flash write error msg
 					break;
 				}
 					
@@ -385,20 +290,19 @@ int main(void)
 					
 				do 
 				{
-					fLSByte = flashBuff[fInMemInc];
-					fInMemInc++;
-					fMSByte = flashBuff[fInMemInc];
-					fInMemInc++;
-
+					fLSByte = flashBuff[fMemIndex++];
+					//fMemIndex++;
+					asm volatile ("nop");
+					fMSByte = flashBuff[fMemIndex++];
+					//fMemIndex++;
 					fDataWord = (fMSByte << 8) | fLSByte;
 						
-					boot_page_fill_safe(ftempAddr,fDataWord);
-					
+					boot_page_fill_safe(ftempAddr,fDataWord);					
 						
 					ftempAddr  = ftempAddr + 2;
 					asm volatile ("nop");	
-					fInMemSize = fInMemSize - 2;
-				} while (fInMemSize);
+					fMemSize = fMemSize - 2;
+				} while (fMemSize);
 					
 				boot_page_write_safe(fPageAddr);
 				boot_spm_busy_wait();
@@ -409,9 +313,43 @@ int main(void)
 				fCsumAddr += 2;
 				asm volatile ("nop");
 				
-				fDataLen--;
-			} while (fDataLen);
+				fDLenTemp--;
+			} while (fDLenTemp);
 			
+/*			
+			//todo: read and verify
+			fDLenTemp = fDataLen;
+			fPageAddr = 0;
+			
+			do 
+			{
+				fInMemSize = SPM_PAGESIZE;
+				fChSumCal = 0;
+				do
+				{
+					fDataWord	=	pgm_read_word_far(fPageAddr);
+					fLSByte = (uint8_t)(fDataWord & 0xff);
+					fMSByte = (uint8_t)(fDataWord >> 8);
+
+					fChSumCal += fLSByte;
+					asm volatile ("nop");
+					fChSumCal += fMSByte;
+					
+					fInMemSize = fInMemSize - 2;
+				} while (fInMemSize);
+				
+				
+				//todo: receive checksum again
+				
+				if(fChSumRev != fChSumCal)
+				{
+					//todo: flash write error msg
+					break;
+				}
+				
+				fDLenTemp--;
+			} while (fDLenTemp);
+*/			
 			tiny_delay();
 			FLASH_EraseSector(fBStatAddr);						
 		}
@@ -465,29 +403,6 @@ void tiny_delay()
 
 //************************************************************************
 
-/*
-static int	Serial_Available(void)
-{
-	return(UART_STATUS_REG & (1 << UART_RECEIVE_COMPLETE));	// wait for data
-}
-
-static unsigned char recchar(void)
-{
-	while (!(UART_STATUS_REG & (1 << UART_RECEIVE_COMPLETE)))
-	{
-		// wait for data
-	}
-	return UART_DATA_REG;
-}
-*/
-static uint8_t SPI_Transfer(uint8_t spidata)
-{
-	SPDR = spidata;
-	asm volatile("nop");			// small delay
-	while(!(SPSR & (1<<SPIF)));		// Wait for transmission complete
-
-	return SPDR;
-}
 
 void FLASH_UntilReady()
 {
@@ -538,12 +453,8 @@ uint16_t FLASH_ReadWord(uint32_t faddr)
 	temp2 = SPI_Transfer(0);
 	SPI_PORT  |=   (1<<SPI_CS);
 	tiny_delay();
-							//sendchar(temp1 & 0xff);
-							//sendchar(temp2 & 0xff);
-							//sendchar(0x0d);
-							//sendchar(0x0a);					
+				
 	return ((temp1 << 8) | (temp2 & 0x00ff));
-
 }
 
 void FLASH_EraseSector(uint32_t faddr)
