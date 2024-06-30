@@ -3,7 +3,7 @@ Archive member included to satisfy reference by file (symbol)
 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
                               e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o (exit)
 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
-                              bootSAH_6.o (__do_clear_bss)
+                              bootSAH_7.o (__do_clear_bss)
 
 Memory Configuration
 
@@ -21,7 +21,7 @@ Linker script and memory map
 
 Address of section .data set to 0x800200
 LOAD e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
-LOAD bootSAH_6.o
+LOAD bootSAH_7.o
 LOAD e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6\libm.a
 Address of section .text set to 0x3e000
 START GROUP
@@ -128,7 +128,7 @@ END GROUP
 .rela.plt
  *(.rela.plt)
 
-.text           0x0003e000      0x590
+.text           0x0003e000      0x5dc
  *(.vectors)
  .vectors       0x0003e000       0xe4 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
                 0x0003e000                __vector_default
@@ -182,7 +182,7 @@ END GROUP
  *(.init8)
  *(.init9)
  .init9         0x0003e104        0x8 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
- .init9         0x0003e10c       0x10 bootSAH_6.o
+ .init9         0x0003e10c       0x10 bootSAH_7.o
                 0x0003e10c                __jumpMain
  *(.init9)
  *(.text)
@@ -244,53 +244,52 @@ END GROUP
                 0x0003e11c                __vector_18
                 0x0003e11c                __vector_20
                 0x0003e11c                __vector_42
- .text          0x0003e120      0x14c bootSAH_6.o
-                0x0003e12e                delay_ms
-                0x0003e14c                tiny_delay
-                0x0003e158                FLASH_UntilReady
-                0x0003e174                FLASH_ResetEnable
-                0x0003e182                FLASH_Reset
-                0x0003e190                FLASH_WriteEnable
-                0x0003e19e                FLASH_ReadWord
-                0x0003e1e6                FLASH_EraseSector
-                0x0003e222                FLASH_WriteByte
- .text          0x0003e26c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
- .text          0x0003e26c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
-                0x0003e26c                . = ALIGN (0x2)
+ .text          0x0003e120      0x11c bootSAH_7.o
+                0x0003e146                delay_ms
+                0x0003e164                tiny_delay
+                0x0003e170                FLASH_UntilReady
+                0x0003e18c                FLASH_ResetEnable
+                0x0003e19a                FLASH_Reset
+                0x0003e1a8                FLASH_WriteEnable
+                0x0003e1b6                FLASH_EraseSector
+                0x0003e1f2                FLASH_WriteByte
+ .text          0x0003e23c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
+ .text          0x0003e23c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
+                0x0003e23c                . = ALIGN (0x2)
  *(.text.*)
- .text.startup  0x0003e26c      0x320 bootSAH_6.o
-                0x0003e26c                main
+ .text.startup  0x0003e23c      0x39c bootSAH_7.o
+                0x0003e23c                main
  .text.libgcc.mul
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
  .text.libgcc.div
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
- .text.libgcc   0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
+ .text.libgcc   0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
  .text.libgcc.prologue
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
  .text.libgcc.builtins
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
  .text.libgcc.fmul
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
  .text.libgcc.fixed
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
  .text.libgcc.mul
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
  .text.libgcc.div
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
- .text.libgcc   0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
+ .text.libgcc   0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
  .text.libgcc.prologue
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
  .text.libgcc.builtins
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
  .text.libgcc.fmul
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
  .text.libgcc.fixed
-                0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
-                0x0003e58c                . = ALIGN (0x2)
+                0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
+                0x0003e5d8                . = ALIGN (0x2)
  *(.fini9)
- .fini9         0x0003e58c        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
-                0x0003e58c                _exit
-                0x0003e58c                exit
+ .fini9         0x0003e5d8        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
+                0x0003e5d8                _exit
+                0x0003e5d8                exit
  *(.fini9)
  *(.fini8)
  *(.fini8)
@@ -309,15 +308,15 @@ END GROUP
  *(.fini1)
  *(.fini1)
  *(.fini0)
- .fini0         0x0003e58c        0x4 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
+ .fini0         0x0003e5d8        0x4 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
  *(.fini0)
-                0x0003e590                _etext = .
+                0x0003e5dc                _etext = .
 
-.data           0x00800200        0x0 load address 0x0003e590
+.data           0x00800200        0x0 load address 0x0003e5dc
                 [!provide]                PROVIDE (__data_start, .)
  *(.data)
  .data          0x00800200        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
- .data          0x00800200        0x0 bootSAH_6.o
+ .data          0x00800200        0x0 bootSAH_7.o
  .data          0x00800200        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
  .data          0x00800200        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
  *(.data*)
@@ -333,15 +332,15 @@ END GROUP
                 0x00800200                PROVIDE (__bss_start, .)
  *(.bss)
  .bss           0x00800200        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
- .bss           0x00800200        0x2 bootSAH_6.o
+ .bss           0x00800200        0x2 bootSAH_7.o
                 0x00800200                app_start
  .bss           0x00800202        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
  .bss           0x00800202        0x0 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
  *(.bss*)
  *(COMMON)
                 0x00800202                PROVIDE (__bss_end, .)
-                0x0003e590                __data_load_start = LOADADDR (.data)
-                0x0003e590                __data_load_end = (__data_load_start + SIZEOF (.data))
+                0x0003e5dc                __data_load_start = LOADADDR (.data)
+                0x0003e5dc                __data_load_end = (__data_load_start + SIZEOF (.data))
 
 .noinit         0x00800202        0x0
                 [!provide]                PROVIDE (__noinit_start, .)
@@ -389,7 +388,7 @@ END GROUP
 
 .comment        0x00000000       0x30
  *(.comment)
- .comment       0x00000000       0x30 bootSAH_6.o
+ .comment       0x00000000       0x30 bootSAH_7.o
                                  0x31 (size before relaxing)
 
 .note.gnu.avr.deviceinfo
@@ -415,39 +414,39 @@ END GROUP
 .debug_aranges  0x00000000       0x30
  *(.debug_aranges)
  .debug_aranges
-                0x00000000       0x30 bootSAH_6.o
+                0x00000000       0x30 bootSAH_7.o
 
 .debug_pubnames
  *(.debug_pubnames)
 
-.debug_info     0x00000000     0x1485
+.debug_info     0x00000000     0x151c
  *(.debug_info .gnu.linkonce.wi.*)
  .debug_info    0x00000000      0xbbc e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
- .debug_info    0x00000bbc      0x8c9 bootSAH_6.o
+ .debug_info    0x00000bbc      0x960 bootSAH_7.o
 
-.debug_abbrev   0x00000000      0xd40
+.debug_abbrev   0x00000000      0xd5a
  *(.debug_abbrev)
  .debug_abbrev  0x00000000      0xb1a e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
- .debug_abbrev  0x00000b1a      0x226 bootSAH_6.o
+ .debug_abbrev  0x00000b1a      0x240 bootSAH_7.o
 
-.debug_line     0x00000000      0x61b
+.debug_line     0x00000000      0x65a
  *(.debug_line .debug_line.* .debug_line_end)
  .debug_line    0x00000000       0x1a e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
- .debug_line    0x0000001a      0x601 bootSAH_6.o
+ .debug_line    0x0000001a      0x640 bootSAH_7.o
 
-.debug_frame    0x00000000      0x128
+.debug_frame    0x00000000      0x114
  *(.debug_frame)
- .debug_frame   0x00000000      0x128 bootSAH_6.o
+ .debug_frame   0x00000000      0x114 bootSAH_7.o
 
-.debug_str      0x00000000      0x6e1
+.debug_str      0x00000000      0x6f4
  *(.debug_str)
  .debug_str     0x00000000      0x3e6 e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
- .debug_str     0x000003e6      0x2fb bootSAH_6.o
-                                0x338 (size before relaxing)
+ .debug_str     0x000003e6      0x30e bootSAH_7.o
+                                0x350 (size before relaxing)
 
-.debug_loc      0x00000000      0x62d
+.debug_loc      0x00000000      0x564
  *(.debug_loc)
- .debug_loc     0x00000000      0x62d bootSAH_6.o
+ .debug_loc     0x00000000      0x564 bootSAH_7.o
 
 .debug_macinfo
  *(.debug_macinfo)
@@ -469,32 +468,31 @@ END GROUP
 
 .debug_ranges   0x00000000       0x20
  *(.debug_ranges)
- .debug_ranges  0x00000000       0x20 bootSAH_6.o
+ .debug_ranges  0x00000000       0x20 bootSAH_7.o
 
 .debug_macro
  *(.debug_macro)
-OUTPUT(bootSAH_6.elf elf32-avr)
+OUTPUT(bootSAH_7.elf elf32-avr)
 LOAD linker stubs
 
 Cross Reference Table
 
 Symbol                                            File
-FLASH_EraseSector                                 bootSAH_6.o
-FLASH_ReadWord                                    bootSAH_6.o
-FLASH_Reset                                       bootSAH_6.o
-FLASH_ResetEnable                                 bootSAH_6.o
-FLASH_UntilReady                                  bootSAH_6.o
-FLASH_WriteByte                                   bootSAH_6.o
-FLASH_WriteEnable                                 bootSAH_6.o
+FLASH_EraseSector                                 bootSAH_7.o
+FLASH_Reset                                       bootSAH_7.o
+FLASH_ResetEnable                                 bootSAH_7.o
+FLASH_UntilReady                                  bootSAH_7.o
+FLASH_WriteByte                                   bootSAH_7.o
+FLASH_WriteEnable                                 bootSAH_7.o
 __FUSE_REGION_LENGTH__                            e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
 __bad_interrupt                                   e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
 __bss_end                                         e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
 __bss_start                                       e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
 __do_clear_bss                                    e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_clear_bss.o)
-                                                  bootSAH_6.o
+                                                  bootSAH_7.o
 __heap_end                                        e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
 __init                                            e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
-__jumpMain                                        bootSAH_6.o
+__jumpMain                                        bootSAH_7.o
 __stack                                           e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
 __vector_1                                        e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
 __vector_10                                       e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
@@ -555,10 +553,10 @@ __vector_9                                        e:/programfiles/atmelstudio/7.
 __vector_default                                  e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
 __vectors                                         e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
 _exit                                             e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
-app_start                                         bootSAH_6.o
-delay_ms                                          bootSAH_6.o
+app_start                                         bootSAH_7.o
+delay_ms                                          bootSAH_7.o
 exit                                              e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr6\libgcc.a(_exit.o)
                                                   e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
-main                                              bootSAH_6.o
+main                                              bootSAH_7.o
                                                   e:/programfiles/atmelstudio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/../../../../avr/lib/avr6/crtatmega2560.o
-tiny_delay                                        bootSAH_6.o
+tiny_delay                                        bootSAH_7.o
