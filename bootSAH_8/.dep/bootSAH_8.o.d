@@ -1,4 +1,4 @@
-bootSAH_7.o: bootSAH_7.c \
+bootSAH_8.o: bootSAH_8.c \
  e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\inttypes.h \
  e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdint.h \
  e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdint.h \
@@ -20,7 +20,8 @@ bootSAH_7.o: bootSAH_7.c \
  e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h \
  e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay_basic.h \
  e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\math.h \
- e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdlib.h
+ e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdlib.h \
+ command.h
 
 e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\inttypes.h:
 
@@ -65,3 +66,5 @@ e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\ut
 e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\math.h:
 
 e:\programfiles\atmelstudio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdlib.h:
+
+command.h:

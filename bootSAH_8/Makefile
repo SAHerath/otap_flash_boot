@@ -59,7 +59,7 @@ FORMAT = ihex
 
 
 # Target file name (without extension).
-TARGET = bootSAH_7
+TARGET = bootSAH_8
 
 
 # List C source files here. (C dependencies are automatically generated.)
